@@ -1,0 +1,447 @@
+/* --- 基础重置和全局样式 --- */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding-top: 60px; /* 为固定导航栏留出空间 */
+    background-color: #f4f7f9;
+    color: #333;
+    line-height: 1.6;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* --- 导航栏样式 --- */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px; 
+    z-index: 1000;
+    box-sizing: border-box;
+    animation: fadeIn 0.5s ease-out;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.navbar-brand {
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #333;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    padding-right: 20px;
+    flex-shrink: 0; 
+}
+
+.navbar-brand span { margin-right: 8px; color: #007bff; }
+
+/* 导航分类容器 */
+.nav-categories {
+    flex-grow: 1; display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    white-space: nowrap; gap: 10px; margin: 0 10px; -ms-overflow-style: none; scrollbar-width: none; 
+    align-items: center; 
+}
+.nav-categories::-webkit-scrollbar { display: none; }
+
+/* --- 通用图标样式 (新增) --- */
+.category-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+    flex-shrink: 0;
+    opacity: 0.7;
+    fill: currentColor; /* 跟随文字颜色 */
+}
+
+/* 导航分类链接样式 (普通单按钮) */
+.nav-category-link {
+    display: inline-flex; /* 改为 flex 以对齐图标 */
+    align-items: center;
+    padding: 6px 12px; 
+    color: #666; text-decoration: none; font-weight: 500;
+    border-radius: 4px; transition: background-color 0.2s, color 0.2s; flex-shrink: 0; line-height: 1.2;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.nav-category-link:hover { color: #007bff; background-color: #e9f0f8; }
+.nav-category-link.active { color: #ffffff; background-color: #007bff; font-weight: 600; }
+.nav-category-link.active:hover { color: #ffffff; background-color: #0069d9; }
+
+/* --- 下拉菜单相关样式 --- */
+.nav-dropdown-wrapper {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* 下拉触发按钮 */
+.nav-dropdown-btn {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    color: #666;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 1em;
+    font-family: inherit;
+    transition: background-color 0.2s, color 0.2s;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.nav-dropdown-btn:hover { background-color: #e9f0f8; color: #007bff; }
+.nav-dropdown-btn.active { color: #ffffff; background-color: #007bff; }
+.nav-dropdown-btn.active:hover { background-color: #0069d9; }
+
+/* 按钮内的小箭头 */
+.nav-arrow {
+    margin-left: 4px;
+    width: 10px;
+    height: 10px;
+    opacity: 0.6;
+    transition: transform 0.2s;
+    fill: currentColor;
+}
+.nav-dropdown-btn.open .nav-arrow { transform: rotate(180deg); }
+
+/* 下拉菜单本体 (悬浮层) */
+.nav-floating-menu {
+    position: fixed; 
+    background: #ffffff;
+    border: 1px solid #dfe1e5;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 2000;
+    padding: 6px 0;
+    min-width: 140px; 
+    display: none;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.2s, transform 0.2s;
+}
+.nav-floating-menu.show {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 下拉菜单项 */
+.nav-menu-item {
+    display: flex; 
+    align-items: center;
+    padding: 8px 16px;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+.nav-menu-item:hover { background-color: #f4f8fe; color: #1a73e8; }
+.nav-menu-item.active { color: #1a73e8; font-weight: 600; background-color: #e8f0fe; }
+
+/* 登录按钮样式 */
+.btn-login {
+    padding: 6px 12px; background-color: #5cb85c; color: white; text-decoration: none;
+    border-radius: 4px; font-weight: 500; transition: background-color 0.2s; flex-shrink: 0; line-height: 1.2;
+}
+.btn-login:hover { background-color: #4cae4c; }
+
+/* --- 书签内容区域样式 --- */
+.bookmarks-section { 
+    max-width: 100%; 
+    margin: 0 auto; 
+    padding: 0 24px; 
+}
+
+/* --- 搜索框容器样式 --- */
+.search-bar-container {
+    padding: 10px 0 20px 0; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* --- 页面主标题样式 --- */
+.main-title {
+    font-size: 3.5em; 
+    font-weight: 900; 
+    color: #202124; 
+    margin-bottom: 20px; 
+    text-align: center;
+}
+
+/* --- 优化后的搜索表单样式 --- */
+.search-form {
+    position: relative; /* 确保建议菜单能相对于表单定位 */
+    display: flex; 
+    width: 100%; 
+    max-width: 580px; /* 略微加宽 */
+    height: 50px; /* 略微加高 */
+    border-radius: 25px; 
+    background-color: #ffffff; 
+    border: 1px solid #dfe1e5; 
+    box-shadow: 0 1px 3px rgba(32, 33, 36, 0.08); 
+    transition: box-shadow 0.3s, background-color 0.3s, border-color 0.3s;
+    align-items: center; 
+}
+.search-form:hover { 
+    box-shadow: 0 4px 12px rgba(32, 33, 36, 0.1); 
+}
+
+/* 聚焦时移除边框，使用蓝色阴影光晕 */
+.search-form:focus-within {
+    border-color: transparent; 
+    box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28), 0 0 0 3px rgba(66, 133, 244, 0.2); 
+}
+
+/* 搜索输入框 */
+.search-input {
+    flex-grow: 1; 
+    padding: 0 12px 0 20px; 
+    font-size: 16px; 
+    border: none; 
+    outline: none;
+    background: transparent; 
+    border-radius: 25px 0 0 25px; 
+    height: 100%; 
+    color: inherit;
+}
+
+/* --- 优化后的搜索按钮样式 (Search Button) --- */
+.search-button {
+    /* 背景透明，与输入框融为一体 */
+    background-color: transparent; 
+    border: none; 
+    padding: 0 16px; 
+    cursor: pointer; 
+    color: #4285f4; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    transition: color 0.2s, background-color 0.1s;
+    border-radius: 0 25px 25px 0; 
+    height: 48px; 
+    flex-shrink: 0; 
+    opacity: 0.85; 
+}
+
+/* 鼠标悬停时，图标颜色加深 */
+.search-button:hover { 
+    color: #1a73e8; 
+    opacity: 1;
+}
+
+/* 聚焦时，图标颜色加深 */
+.search-form:focus-within .search-button {
+    color: #1a73e8; 
+    opacity: 1;
+}
+
+.search-button svg { 
+    width: 22px; 
+    height: 22px; 
+}
+
+/* --- 书签网格样式 --- */
+.bookmark-grid {
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px; 
+    padding: 25px 0 40px 0; 
+    animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s backwards;
+}
+
+.bookmark-card {
+    background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; 
+    padding: 12px; 
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    text-decoration: none; color: #333; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.3s, border-color 0.3s;
+    height: auto; 
+    min-height: 90px;
+    box-sizing: border-box;
+}
+.bookmark-card:hover { transform: translateY(-3px); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); color: #007bff; }
+.bookmark-icon { width: 32px; height: 32px; object-fit: contain; margin-bottom: 6px; border-radius: 4px; }
+.bookmark-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; margin-top: 4px; }
+
+/* --- 动画关键帧 --- */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* --- 媒体查询 --- */
+@media (max-width: 768px) {
+    body { padding-top: 50px; }
+    .navbar { height: 50px; padding: 0 12px; justify-content: flex-start; }
+    .navbar-brand { font-size: 1.2em; padding-right: 10px; }
+    .nav-categories { margin: 0 5px; flex-basis: auto; }
+    .nav-category-link, .btn-login, .nav-dropdown-btn { padding: 6px 10px; font-size: 0.85em; }
+    .bookmarks-section { padding: 0 12px; }
+    
+    .search-bar-container { padding: 10px 10px 0 10px; } 
+    .main-title { font-size: 2.5em; margin-bottom: 15px; } 
+    
+    /* 移动端搜索框适配 */
+    .search-form { max-width: 100%; height: 44px; border-radius: 22px; }
+    .search-input { font-size: 15px; padding: 0 8px 0 16px; border-radius: 22px 0 0 22px; }
+    .search-button { height: 42px; padding: 0 12px; border-radius: 0 22px 22px 0; }
+    .search-button svg { width: 18px; height: 18px; }
+
+    .bookmark-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; padding: 20px 0 15px 0; } 
+    .bookmark-card { min-height: 85px; padding: 10px; }
+    .bookmark-icon { width: 28px; height: 28px; }
+}
+
+/* --- 加载动画 --- */
+#global-loader {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #f4f7f9; z-index: 9999; display: flex; justify-content: center; align-items: center;
+    transition: opacity 0.4s ease-out, visibility 0.4s;
+}
+#global-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.loader-spinner {
+    width: 40px; height: 40px; border: 3px solid #e1e4e8; border-top: 3px solid #007bff;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* ============================================== */
+/* --- 书签搜索建议样式 (新增) --- */
+/* ============================================== */
+
+.bookmark-suggestions-menu {
+    position: absolute;
+    top: 100%; /* 位于搜索框下方 */
+    left: 0;
+    right: 0;
+    margin-top: 5px; /* 与搜索框的间隔 */
+    background: #ffffff;
+    border: 1px solid #dfe1e5;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 100;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none; /* 默认隐藏 */
+}
+
+.suggestion-item {
+    display: flex; 
+    align-items: center;
+    padding: 8px 12px;
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.suggestion-item:hover { 
+    background-color: #f4f8fe; 
+    color: #1a73e8; 
+}
+.suggestion-item-icon {
+    width: 16px; 
+    height: 16px; 
+    object-fit: contain; 
+    margin-right: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+.suggestion-item-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.suggestion-item-category {
+    font-size: 0.8em;
+    color: #999;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+
+/* ================= 深色模式 (Dark Mode) ================= */
+body.dark-mode { background-color: #171923; color: #e2e8f0; }
+
+body.dark-mode .navbar { background-color: #1a202c; border-bottom: 1px solid #2d3748; box-shadow: none; }
+body.dark-mode .navbar-brand { color: #e2e8f0; }
+
+/* 导航链接深色适配 */
+body.dark-mode .nav-category-link { color: #a0aec0; }
+body.dark-mode .nav-category-link:hover { background-color: #2d3748; color: #fff; }
+body.dark-mode .nav-category-link.active { background-color: #3182ce; color: #fff; }
+
+/* 下拉菜单深色适配 */
+body.dark-mode .nav-dropdown-btn { color: #a0aec0; }
+body.dark-mode .nav-dropdown-btn:hover { background-color: #2d3748; color: #fff; }
+body.dark-mode .nav-dropdown-btn.active { background-color: #3182ce; color: #fff; }
+body.dark-mode .nav-floating-menu { background-color: #2d3748; border-color: #4a5568; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+body.dark-mode .nav-menu-item { color: #e2e8f0; }
+body.dark-mode .nav-menu-item:hover { background-color: #4a5568; }
+body.dark-mode .nav-menu-item.active { background-color: #3182ce; color: #fff; }
+
+/* 搜索框深色 */
+body.dark-mode .main-title { color: #e2e8f0; } 
+
+body.dark-mode .search-form { 
+    background-color: #2d3748; 
+    border-color: #4a5568;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+body.dark-mode .search-form:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+
+/* 深色模式聚焦状态 */
+body.dark-mode .search-form:focus-within {
+    border-color: transparent;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(66, 133, 244, 0.35); 
+}
+
+/* 深色模式下按钮颜色 */
+body.dark-mode .search-button { color: #63b3ed; } /* 浅蓝色 */
+body.dark-mode .search-button:hover,
+body.dark-mode .search-form:focus-within .search-button { 
+    color: #4299e1; /* 稍深的蓝色 */
+    background-color: transparent;
+}
+
+/* 书签卡片深色 */
+body.dark-mode .bookmark-card { background-color: #1a202c; border-color: #2d3748; color: #e2e8f0; }
+body.dark-mode .bookmark-card:hover { background-color: #2d3748; border-color: #4a5568; box-shadow: 0 8px 16px rgba(0,0,0,0.3); color: #63b3ed; }
+
+/* Loader 深色 */
+body.dark-mode #global-loader { background-color: #171923; }
+body.dark-mode .loader-spinner { border-color: #2d3748; border-top-color: #3182ce; }
+
+/* ============================================== */
+/* --- 搜索建议深色模式适配 (新增) --- */
+/* ============================================== */
+
+body.dark-mode .bookmark-suggestions-menu {
+    background-color: #2d3748; 
+    border-color: #4a5568;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+body.dark-mode .suggestion-item {
+    color: #e2e8f0;
+}
+body.dark-mode .suggestion-item:hover { 
+    background-color: #4a5568; 
+    color: #63b3ed;
+}
+body.dark-mode .suggestion-item-category {
+    color: #a0aec0;
+}

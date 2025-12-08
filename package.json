@@ -1,0 +1,20 @@
+{
+  "name": "node-nav",
+  "version": "1.0.0",
+  "description": "Navigation site with Argo tunnel and subscription management",
+  "repository": "https://github.com/llodys/node-nav",
+  "main": "app.js",
+  "author": "llodys",
+  "license": "MIT",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

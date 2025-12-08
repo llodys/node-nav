@@ -1,0 +1,262 @@
+{
+  "常用": [
+    {
+      "name": "Gmail",
+      "url": "https://mail.google.com",
+      "icon": "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://mail.google.com&size=128"
+    },
+    {
+      "name": "翻译",
+      "url": "https://translate.google.com/?sl=auto&tl=zh-CN&op=translate",
+      "icon": "https://www.google.com/s2/favicons?domain=translate.google.com&sz=128"
+    },
+    {
+      "name": "地图",
+      "url": "https://maps.google.com",
+      "icon": "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://maps.google.com/&size=128"
+    },
+    {
+      "name": "Gemini",
+      "url": "https://gemini.google.com/app?hl=zh",
+      "icon": "https://www.google.com/s2/favicons?domain=gemini.google.com&sz=128"
+    },
+    {
+      "name": "YouTube",
+      "url": "https://youtube.com",
+      "icon": "https://www.google.com/s2/favicons?domain=youtube.com&sz=128"
+    },
+    {
+      "name": "GitHub",
+      "url": "https://github.com",
+      "icon": "https://www.google.com/s2/favicons?domain=github.com&sz=128"
+    },
+    {
+      "name": "GitLab",
+      "url": "https://about.gitlab.com",
+      "icon": "https://www.google.com/s2/favicons?domain=about.gitlab.com&sz=128"
+    },
+    {
+      "name": "Cloudflare",
+      "url": "https://dash.cloudflare.com",
+      "icon": "https://www.google.com/s2/favicons?domain=dash.cloudflare.com&sz=128"
+    },
+    {
+      "name": "Ping0",
+      "url": "https://ping0.cc",
+      "icon": "https://www.google.com/s2/favicons?domain=ping0.cc&sz=128"
+    },
+    {
+      "name": "ITDOG",
+      "url": "https://www.itdog.cn/tcping",
+      "icon": "https://www.google.com/s2/favicons?domain=www.itdog.cn&sz=128"
+    },
+    {
+      "name": "ip.sb",
+      "url": "https://ip.sb",
+      "icon": "https://www.google.com/s2/favicons?domain=ip.sb&sz=128"
+    },
+    {
+      "name": "Google Fiber",
+      "url": "https://fiber.google.com/speedtest/",
+      "icon": "https://www.google.com/s2/favicons?domain=fiber.google.com&sz=128"
+    },
+    {
+      "name": "ChatGPT",
+      "url": "https://chat.openai.com",
+      "icon": "https://www.google.com/s2/favicons?domain=chat.openai.com&sz=128"
+    },
+    {
+      "name": "NodeSeek",
+      "url": "https://www.nodeseek.com",
+      "icon": "https://www.google.com/s2/favicons?domain=www.nodeseek.com&sz=128"
+    },
+    {
+      "name": "Linux do",
+      "url": "https://linux.do",
+      "icon": "https://www.google.com/s2/favicons?domain=linux.do&sz=128"
+    },
+    {
+      "name": "FauxID",
+      "url": "https://fauxid.com",
+      "icon": "https://www.google.com/s2/favicons?domain=fauxid.com&sz=128"
+    },
+    {
+      "name": "接码平台",
+      "url": "https://lubansms.com",
+      "icon": "https://www.google.com/s2/favicons?domain=lubansms.com&sz=128"
+    },
+    {
+      "name": "免费接码",
+      "url": "https://www.smsonline.cloud/zh",
+      "icon": "https://www.google.com/s2/favicons?domain=www.smsonline.cloud&sz=128"
+    },
+    {
+      "name": "免费图片",
+      "url": "https://www.pexels.com/zh-cn/",
+      "icon": "https://www.google.com/s2/favicons?domain=www.pexels.com&sz=128"
+    }
+  ],
+  "工具": [
+    {
+      "name": "JSON工具",
+      "url": "https://www.json.cn",
+      "icon": "https://img.icons8.com/nolan/128/json.png"
+    },
+    {
+      "name": "base64工具",
+      "url": "https://www.qqxiuzi.cn/bianma/base64.htm",
+      "icon": "https://cdn.base64decode.org/assets/images/b64-180.webp"
+    },
+    {
+      "name": "二维码生成",
+      "url": "https://cli.im",
+      "icon": "https://img.icons8.com/fluency/96/qr-code.png"
+    },
+    {
+      "name": "JS混淆",
+      "url": "https://obfuscator.io",
+      "icon": "https://img.icons8.com/color/240/javascript--v1.png"
+    },
+    {
+      "name": "Python混淆",
+      "url": "https://freecodingtools.org/tools/obfuscator/python",
+      "icon": "https://img.icons8.com/color/240/python--v1.png"
+    },
+    {
+      "name": "Remove.photos",
+      "url": "https://remove.photos/zh-cn",
+      "icon": "https://img.icons8.com/doodle/192/picture.png"
+    }
+  ],
+  "服务": [
+    {
+      "name": "阿里云",
+      "url": "https://www.aliyun.com",
+      "icon": "https://www.google.com/s2/favicons?domain=www.aliyun.com&sz=128"
+    },
+    {
+      "name": "腾讯云",
+      "url": "https://cloud.tencent.com",
+      "icon": "https://www.google.com/s2/favicons?domain=cloud.tencent.com&sz=128"
+    },
+    {
+      "name": "甲骨文云",
+      "url": "https://cloud.oracle.com",
+      "icon": "https://www.google.com/s2/favicons?domain=cloud.oracle.com&sz=128"
+    },
+    {
+      "name": "亚马逊云",
+      "url": "https://aws.amazon.com",
+      "icon": "https://img.icons8.com/color/144/amazon-web-services.png"
+    }
+  ],
+  "智能": [
+    {
+      "name": "ChatGPT",
+      "url": "https://chat.openai.com",
+      "icon": "https://www.google.com/s2/favicons?domain=chat.openai.com&sz=128"
+    },
+    {
+      "name": "Gemini",
+      "url": "https://gemini.google.com",
+      "icon": "https://www.google.com/s2/favicons?domain=gemini.google.com&sz=128"
+    },
+    {
+      "name": "Perplexity",
+      "url": "https://www.perplexity.ai",
+      "icon": "https://www.google.com/s2/favicons?domain=www.perplexity.ai&sz=128"
+    },
+    {
+      "name": "Deepseek",
+      "url": "https://www.deepseek.com",
+      "icon": "https://www.google.com/s2/favicons?domain=www.deepseek.com&sz=128"
+    },
+    {
+      "name": "Claude",
+      "url": "https://claude.ai",
+      "icon": "https://www.google.com/s2/favicons?domain=claude.ai&sz=128"
+    },
+    {
+      "name": "阿里千问",
+      "url": "https://chat.qwenlm.ai",
+      "icon": "https://www.google.com/s2/favicons?domain=chat.qwenlm.ai&sz=128"
+    },
+    {
+      "name": "Kimi",
+      "url": "https://www.kimi.com",
+      "icon": "https://www.google.com/s2/favicons?domain=www.kimi.com&sz=128"
+    }
+  ],
+  "邮箱": [
+    {
+      "name": "Gmail",
+      "url": "https://mail.google.com",
+      "icon": "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://mail.google.com&size=128"
+    },
+    {
+      "name": "Outlook",
+      "url": "https://outlook.live.com",
+      "icon": "https://www.google.com/s2/favicons?domain=outlook.live.com&sz=128"
+    },
+    {
+      "name": "QQ邮箱",
+      "url": "https://mail.qq.com",
+      "icon": "https://www.google.com/s2/favicons?domain=mail.qq.com&sz=128"
+    },
+    {
+      "name": "Proton Mail",
+      "url": "https://account.proton.me",
+      "icon": "https://www.google.com/s2/favicons?domain=account.proton.me&sz=128"
+    },
+    {
+      "name": "雅虎邮箱",
+      "url": "https://mail.yahoo.com",
+      "icon": "https://img.icons8.com/color/240/yahoo--v2.png"
+    },
+    {
+      "name": "临时邮箱",
+      "url": "https://temp-mail.org/",
+      "icon": "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://linshiyouxiang.net&size=128"
+    }
+  ],
+  "软件": [
+    {
+      "name": "Hellowindows",
+      "url": "https://hellowindows.cn",
+      "icon": "https://www.google.com/s2/favicons?domain=hellowindows.cn&sz=128"
+    },
+    {
+      "name": "奇迹秀",
+      "url": "https://www.qijishow.com/down",
+      "icon": "https://www.google.com/s2/favicons?domain=www.qijishow.com&sz=128"
+    },
+    {
+      "name": "软件先锋",
+      "url": "https://topcracked.com",
+      "icon": "https://cdn.mac89.com/win_macxf_node/static/favicon.ico"
+    },
+    {
+      "name": "Macwk",
+      "url": "https://www.macwk.com",
+      "icon": "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://www.macwk.com&size=128"
+    },
+    {
+      "name": "Macsc",
+      "url": "https://mac.macsc.com",
+      "icon": "https://cdn.mac89.com/macsc_node/static/favicon.ico"
+    }
+  ],
+  "settings": {
+    "theme": "auto",
+    "siteTitle": "",
+    "engineConfig": [
+      {
+        "id": "google",
+        "name": "Google",
+        "url": "https://www.google.com/search",
+        "queryParam": "q",
+        "icon": "https://www.google.com/s2/favicons?domain=www.google.com&sz=32"
+      }
+    ]
+  }
+}
