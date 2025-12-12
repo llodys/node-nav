@@ -34,7 +34,6 @@ white() { echo -e "${WHITE}$1${RESET}"; }
 load_existing_config() {
     if [ -f "$CONFIG_FILE_ENV" ]; then
         local TMP_ENV=$(mktemp)
-        # 移除 Windows 换行符
         tr -d '\r' < "$CONFIG_FILE_ENV" > "$TMP_ENV" 
         set -a
         source "$TMP_ENV"
@@ -93,7 +92,7 @@ generate_uuid() {
     head -c 16 /dev/urandom | xxd -p
 }
 
-# 检查系统 (Alpine/OpenRC)
+# 检查系统
 check_system() {
     if [ -f /etc/os-release ]; then
         source /etc/os-release
@@ -204,7 +203,7 @@ initialize_install_vars() {
 
 # 提示用户配置
 prompt_user_config() {
-    cyan "--- 🌐 服务配置流程 (必填 Argo 信息) ---"
+    cyan "--- 安装流程 ---"
 
     read -p "$(yellow "1. 请输入 用户UUID (留空自动生成): ")" UUID_INPUT
     if [ -z "$UUID_INPUT" ]; then
@@ -224,9 +223,7 @@ prompt_user_config() {
         break
     done
 
-    # 修复: 使用 -s 隐藏密钥输入
-    read -s -p "$(yellow "3. 请输入 固定隧道密钥 [$( [ -z "$ARGO_AUTH" ] && echo '必填' || echo '已配置')]: ")" ARGO_AUTH_INPUT
-    echo # 换行
+    read -p "$(yellow "3. 请输入 固定隧道密钥 [$( [ -z "$ARGO_AUTH" ] && echo '必填' || echo '已配置')]: ")" ARGO_AUTH_INPUT
     
     [ -z "$ARGO_AUTH_INPUT" ] || ARGO_AUTH="$ARGO_AUTH_INPUT"
 
@@ -250,45 +247,38 @@ prompt_user_config() {
     read -p "$(yellow "8. 请输入 节点名称前缀 [默认: $NAME]: ")" NAME_INPUT
     [ -z "$NAME_INPUT" ] || NAME="$NAME_INPUT"
 
-    # 修复: 使用 -s 隐藏密码输入
-    read -s -p "$(yellow "9. 请输入 书签管理密码 [默认: $ADMIN_PASSWORD]: ")" ADMIN_PASSWORD_INPUT
-    echo # 换行
+    read -p "$(yellow "9. 请输入 书签管理密码 [默认: $ADMIN_PASSWORD]: ")" ADMIN_PASSWORD_INPUT
     [ -z "$ADMIN_PASSWORD_INPUT" ] || ADMIN_PASSWORD="$ADMIN_PASSWORD_INPUT"
 }
 
 validate_and_confirm() {
     if [ -z "$ARGO_DOMAIN" ] || [ -z "$ARGO_AUTH" ]; then
         clear
-        red "❌ 错误: 固定隧道域名 和 固定隧道密钥 为必填项！"
+        red "错误: ARGO_DOMAIN (隧道域名) 和 ARGO_AUTH (隧道密钥) 为必填项！"
         yellow "请重新运行安装流程并确保填写。"
         sleep 3
         return 1
     fi
 
     if ! check_port "$PORT"; then
-        red "❌ 错误: HTTP服务端口 $PORT 冲突，请修改后重试。"
+        red "错误: HTTP服务端口 $PORT 冲突，请修改后重试。"
         sleep 3
         return 1
     fi
 
     clear
-    cyan "--- ✨ 最终配置确认 (OpenRC/Alpine) ---"
+    cyan "--- 请确认配置 ---"
     
     # 统一对齐
-    echo -e "${CYAN} UUID:         ${RESET}$(green "$UUID")" $( [ "$UUID_GENERATED" = true ] && bright_green "(自动生成)" || true )
-    echo -e "${CYAN} HTTP端口:     ${RESET}$(green "$PORT")"
-    
-    # 修复: 隐藏敏感信息
-    echo -e "${CYAN} 隧道密钥:     ${RESET}$(green "********")"$( [ "$OLD_CONFIG_LOADED" = true ] && yellow " (旧值)" || true )
-    
-    echo -e "${CYAN} 隧道域名:     ${RESET}$(green "$ARGO_DOMAIN")"
-    echo -e "${CYAN} Argo端口:     ${RESET}$(green "$ARGO_PORT")"
-    echo -e "${CYAN} 优选IP/域名:  ${RESET}$(green "$CFIP")"
-    echo -e "${CYAN} 订阅路径:     ${RESET}$(green "$SUB_PATH")"
-    echo -e "${CYAN} 节点名称前缀: ${RESET}$(green "$NAME")"
-    
-    # 修复: 隐藏敏感信息
-    echo -e "${CYAN} 书签密码:     ${RESET}$(green "********")"
+    echo -e "UUID: $(green "$UUID")" $( [ "$UUID_GENERATED" = true ] && bright_green " (已自动生成)" || true )
+    echo -e "HTTP端口: $(green "$PORT")"
+    echo -e "隧道密钥: $(green "$ARGO_AUTH")"$( [ "$OLD_CONFIG_LOADED" = true ] && yellow " (旧值)" || true )
+    echo -e "隧道域名: $(green "$ARGO_DOMAIN")"
+    echo -e "Argo端口: $(green "$ARGO_PORT")"
+    echo -e "优选IP/域名: $(green "$CFIP")"
+    echo -e "订阅路径: $(green "$SUB_PATH")"
+    echo -e "节点名称前缀: $(green "$NAME")"
+    echo -e "书签密码: $(green "$ADMIN_PASSWORD")"
     
     cyan "--------------------------------------"
     read -p "$(yellow "确认开始安装? (y/n): ")" confirm
@@ -356,7 +346,7 @@ perform_core_installation() {
     unzip -q "$ZIP_FILE" -d "$INSTALL_DIR"; rm -f "$ZIP_FILE"
 
     cd "$INSTALL_DIR"
-    white "🛠️ 安装 npm 依赖 (生产环境模式)..."
+    white "🛠️ 安装 npm 依赖..."
     
     # 关键优化点：使用 --omit=dev 确保只安装生产环境依赖
     if ! npm install --omit=dev --silent 2>> "$LOG_FILE"; then
@@ -366,7 +356,7 @@ perform_core_installation() {
         exit 1
     fi
 
-    white "配置文件..."
+    white "创建配置文件..."
     cat > "$CONFIG_FILE_ENV" <<EOF
 PORT=${PORT}
 UUID=${UUID}
@@ -434,7 +424,7 @@ EOF
 
     create_shortcut
 
-    yellow "1. 服务安装并启动完成。已设置开机自启 (OpenRC)。"
+    yellow "1. 服务安装并启动完成。已设置开机自启。"
     yellow "2. 请等待1分钟后, 在菜单里使用 ${CYAN}4.查看订阅链接${YELLOW}。"
 }
 
@@ -794,7 +784,7 @@ main() {
         if [ "$SERVICE_INSTALLED" = true ]; then
             echo -e "${GREEN} 2. ${RESET}卸载服务"
             echo -e "${GREEN} 3. ${RESET}重启服务"
-            echo -e "${GREEN} 4. ${RESET}${CYAN}查看订阅链接${RESET}" 
+            echo -e "${GREEN} 4. ${RESET}${YELLOW}查看订阅链接${RESET}" 
             
             # --- 管理功能区 ---
             echo -e "${YELLOW}═══ ${WHITE}服务管理${YELLOW} ════════════════════════${RESET}"
