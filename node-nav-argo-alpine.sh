@@ -600,7 +600,7 @@ edit_variables() {
                 1) read -p "输入新 UUID: " v; [ -z "$v" ] && v=$(generate_uuid); update_config_value "UUID" "$v" ;;
                 2) read -p "输入新 名称前缀: " v; update_config_value "NAME" "$v" ;;
                 3) read -p "输入新 HTTP端口: " v; validate_port "$v" "PORT" && update_config_value "PORT" "$v" ;;
-                [sS]) if save_and_restart; then return 10; fi ;; # <--- 修复点 2：将 } 更改为 fi
+                [sS]) if save_and_restart; then return 10; fi ;;
                 0) return 0 ;;
                 *) red "无效选项"; sleep 0.5 ;;
             esac
@@ -616,8 +616,7 @@ edit_variables() {
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}固定隧道域名: $(show_var "$ARGO_DOMAIN")"
-            # 修复: 隐藏敏感信息
-            echo -e "${GREEN} 2. ${RESET}固定隧道密钥: $(green "********")"
+            echo -e "${GREEN} 2. ${RESET}固定隧道密钥: $(green "$ARGO_AUTH")"
             echo -e "${GREEN} 3. ${RESET}Argo隧道端口: $(show_var "$ARGO_PORT")"
             echo -e "${YELLOW}═════════════════════════════════════${RESET}"
             echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
@@ -626,10 +625,9 @@ edit_variables() {
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 隧道域名: " v; update_config_value "ARGO_DOMAIN" "$v" ;;
-                # 修复: 使用 -s 隐藏密钥输入
                 2) read -s -p "输入新 隧道密钥: " v; echo; update_config_value "ARGO_AUTH" "$v" ;; 
                 3) read -p "输入新 Argo端口: " v; validate_port "$v" "ARGO_PORT" && update_config_value "ARGO_PORT" "$v" ;;
-                [sS]) if save_and_restart; then return 10; fi ;; # <--- 修复点 3：将 } 更改为 fi
+                [sS]) if save_and_restart; then return 10; fi ;;
                 0) return 0 ;;
                 *) red "无效选项"; sleep 0.5 ;;
             esac
@@ -657,7 +655,7 @@ edit_variables() {
                 1) read -p "输入新 优选IP: " v; update_config_value "CFIP" "$v" ;;
                 2) read -p "输入新 节点端口: " v; update_config_value "CFPORT" "$v" ;;
                 3) read -p "输入新 订阅路径: " v; update_config_value "SUB_PATH" "$v" ;;
-                [sS]) if save_and_restart; then return 10; fi ;; # <--- 修复点 4：将 } 更改为 fi
+                [sS]) if save_and_restart; then return 10; fi ;;
                 0) return 0 ;;
                 *) red "无效选项"; sleep 0.5 ;;
             esac
@@ -684,7 +682,7 @@ edit_variables() {
                 1) read -p "输入新 哪吒服务器: " v; update_config_value "NEZHA_SERVER" "$v" ;;
                 2) read -p "输入新 哪吒端口: " v; update_config_value "NEZHA_PORT" "$v" ;;
                 3) read -p "输入新 哪吒密钥: " v; update_config_value "NEZHA_KEY" "$v" ;;
-                [sS]) if save_and_restart; then return 10; fi ;; # <--- 修复点 5：将 } 更改为 fi
+                [sS]) if save_and_restart; then return 10; fi ;;
                 0) return 0 ;;
                 *) red "无效选项"; sleep 0.5 ;;
             esac
@@ -703,8 +701,7 @@ edit_variables() {
             echo -e "${GREEN} 2. ${RESET}项目分配域名: $(show_var "$PROJECT_URL")"
             echo -e "${GREEN} 3. ${RESET}自动访问保活: $(show_var "$AUTO_ACCESS")"
             echo -e "${GREEN} 4. ${RESET}项目运行目录: $(show_var "$FILE_PATH")"
-            # 修复: 隐藏敏感信息
-            echo -e "${GREEN} 5. ${RESET}后台管理密码: $(green "********")"
+            echo -e "${GREEN} 5. ${RESET}后台管理密码: $(green "$ADMIN_PASSWORD")"
             echo -e "${YELLOW}═════════════════════════════════════${RESET}"
             echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
             echo -e "${RED} 0. ${RESET}返回上一页"
