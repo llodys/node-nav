@@ -42,7 +42,7 @@ load_existing_config() {
         ARGO_DOMAIN="${ARGO_DOMAIN:-}"
         ARGO_AUTH="${ARGO_AUTH:-}"
         ARGO_PORT="${ARGO_PORT:-8001}"
-        CFIP="${CFIP:-cf.008500.xyz}"
+        CFIP="${CFIP:-cdns.doon.eu.org}"
         SUB_PATH="${SUB_PATH:-sub}"
         NAME="${NAME:-node}"
         ADMIN_PASSWORD="${ADMIN_PASSWORD:-123456}"
@@ -168,7 +168,7 @@ check_status_for_menu() {
 initialize_install_vars() {
     PORT=3000
     ARGO_PORT=8001
-    CFIP="cf.008500.xyz"
+    CFIP="cdns.doon.eu.org"
     SUB_PATH="sub"
     NAME="node"
     ADMIN_PASSWORD="123456"
