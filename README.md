@@ -55,7 +55,9 @@ bash <(curl -fsSL https://raw.githubusercontent.com/llodys/node-nav/main/install
 ## 🙏 致谢
 
 本项目基于**老王 (eooce)** 的项目进行修改和完善。
+
 在此，对原作者 **老王** 表示由衷的感谢！
+
 原作者仓库地址：https://github.com/eooce/nodejs-argo
 
 ---
