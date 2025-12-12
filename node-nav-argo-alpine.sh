@@ -6,20 +6,22 @@ INSTALL_DIR="/opt/$APP_NAME"
 LOG_FILE="/var/log/${APP_NAME}_install.log"
 CONFIG_FILE_ENV="$INSTALL_DIR/config.env"
 CONFIG_FILE_SUB="$INSTALL_DIR/data/sub.txt"
-SERVICE_FILE="/etc/init.d/$APP_NAME"
+SERVICE_FILE="/etc/init.d/$APP_NAME" 
 ZIP_URL="https://github.com/llodys/node-nav/releases/download/node-nav/node-nav.zip"
 ZIP_FILE="/tmp/$APP_NAME.zip"
 
 SHORTCUT_NAME="nav"
 SHORTCUT_PATH="/usr/local/bin/$SHORTCUT_NAME"
-SCRIPT_URL="https://raw.githubusercontent.com/llodys/node-nav/main/node-nav-argo-alpine.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/llodys/node-nav/main/node-nav-argo-alpine.sh" 
 
 OS_ID=""
 PKG_MANAGER="apk"
 
 RED='\033[1;31m'; GREEN='\033[1;32m'; BRIGHT_GREEN='\033[1;32m'; YELLOW='\033[1;33m'
 BLUE='\033[1;34m'; MAGENTA='\033[1;35m'; CYAN='\033[1;36m'; WHITE='\033[1;37m'; RESET='\033[0m'
+BOLD='\033[1m'
 
+# 颜色函数
 red() { echo -e "${RED}$1${RESET}"; }
 green() { echo -e "${GREEN}$1${RESET}"; }
 bright_green() { echo -e "${BRIGHT_GREEN}$1${RESET}"; }
@@ -28,10 +30,12 @@ blue() { echo -e "${BLUE}$1${RESET}"; }
 cyan() { echo -e "${CYAN}$1${RESET}"; }
 white() { echo -e "${WHITE}$1${RESET}"; }
 
+# 加载现有配置
 load_existing_config() {
     if [ -f "$CONFIG_FILE_ENV" ]; then
         local TMP_ENV=$(mktemp)
-        tr -d '\r' < "$CONFIG_FILE_ENV" > "$TMP_ENV"
+        # 移除 Windows 换行符
+        tr -d '\r' < "$CONFIG_FILE_ENV" > "$TMP_ENV" 
         set -a
         source "$TMP_ENV"
         set +a
@@ -51,6 +55,7 @@ load_existing_config() {
     return 1
 }
 
+# 获取公网 IP
 get_public_ip() {
     white "正在尝试获取服务器公网 IP (IPv4 & IPv6)..."
     if ! command -v curl &>/dev/null; then return; fi
@@ -72,6 +77,7 @@ get_public_ip() {
     fi
 }
 
+# 检查 Root 权限
 check_root() {
     if [ "$(id -u)" -ne 0 ]; then
         red "错误: 此脚本需要 root 权限运行。"
@@ -79,6 +85,7 @@ check_root() {
     fi
 }
 
+# 生成 UUID
 generate_uuid() {
     command -v uuidgen &>/dev/null && uuidgen || \
     cat /proc/sys/kernel/random/uuid 2>/dev/null || \
@@ -86,6 +93,7 @@ generate_uuid() {
     head -c 16 /dev/urandom | xxd -p
 }
 
+# 检查系统 (Alpine/OpenRC)
 check_system() {
     if [ -f /etc/os-release ]; then
         source /etc/os-release
@@ -96,10 +104,10 @@ check_system() {
 
     if [[ "$OS_ID" != "alpine" ]]; then
         yellow "警告: 检测到当前系统不是 Alpine Linux ($OS_ID)。"
-        yellow "本脚本专为 Alpine 优化，建议在 Alpine 环境下运行。"
+        yellow "本脚本专为 Alpine/OpenRC 优化，建议在 Alpine 环境下运行。"
         sleep 2
     else
-        white "检测到系统: $(green "Alpine Linux") | 包管理器: $(green "apk")"
+        white "检测到系统: $(green "Alpine Linux") | Init系统: $(green "OpenRC")"
     fi
 
     if ! command -v rc-service &>/dev/null; then
@@ -109,9 +117,11 @@ check_system() {
     fi
 }
 
+# 检查和安装依赖 (使用 apk)
 check_dependencies() {
-    white "正在更新软件源并检查依赖..."
+    white "正在更新软件源并检查/安装依赖 (curl, unzip, lsof, uuidgen, bash)..."
     apk update >> "$LOG_FILE" 2>&1
+    # 确保安装 bash, curl, unzip, lsof, uuidgen (util-linux), coreutils (用于 mktemp)
     apk add bash curl unzip lsof util-linux coreutils >> "$LOG_FILE" 2>&1
     
     for cmd in curl unzip lsof uuidgen; do
@@ -122,11 +132,12 @@ check_dependencies() {
     done
 }
 
+# 安装 Node.js
 install_nodejs() {
     if command -v node &>/dev/null; then
         white "检测 Node.js 版本: $(node -v)"
     else
-        white "未检测到 Node.js，正在安装 (apk)..."
+        white "未检测到 Node.js，正在安装..."
         apk add nodejs npm >> "$LOG_FILE" 2>&1
         if command -v node &>/dev/null; then
             green "Node.js 已安装: $(node -v)"
@@ -137,6 +148,7 @@ install_nodejs() {
     fi
 }
 
+# 检查端口占用
 check_port() {
     local port=$1
     if lsof -i:"$port" &>/dev/null; then
@@ -146,25 +158,25 @@ check_port() {
     return 0
 }
 
+# 菜单状态显示
 check_status_for_menu() {
     PADDING="    " 
-
-    STATUS_TEXT=""
+    local STATUS_TEXT=""
     if [ -f "$SERVICE_FILE" ]; then
         if rc-service "$APP_NAME" status >/dev/null 2>&1; then
-            STATUS_TEXT="${CYAN}当前状态: $(bright_green "运行中")${RESET}"
+            STATUS_TEXT="${CYAN}当前状态: ${BOLD}$(bright_green "运行中")${RESET}"
         else
-            STATUS_TEXT="${CYAN}当前状态: $(white "已停止")${RESET}"
+            STATUS_TEXT="${CYAN}当前状态: ${BOLD}$(white "已停止")${RESET}"
         fi
     else
-        STATUS_TEXT="${CYAN}当前状态: $(yellow "未安装")${RESET}"
+        STATUS_TEXT="${CYAN}当前状态: ${BOLD}$(yellow "未安装")${RESET}"
     fi
 
     echo -e "${PADDING}${STATUS_TEXT}"
-    
-    cyan "---------------------------------"
+    cyan "--------------------------------------"
 }
 
+# 初始化安装变量
 initialize_install_vars() {
     PORT=3000
     ARGO_PORT=8001
@@ -178,20 +190,21 @@ initialize_install_vars() {
     
     if load_existing_config; then
         OLD_CONFIG_LOADED=true
-        yellow "检测到旧配置文件，将使用其值作为默认选项。"
+        yellow "ℹ️ 检测到旧配置文件，将使用其值作为默认选项。"
         sleep 1
-    fi
+    fi # <--- 修复点 1：将 } 更改为 fi
     
     get_public_ip
     UUID_DEFAULT="${UUID:-$(generate_uuid)}"
 
     if [ -f "$SERVICE_FILE" ]; then
-        yellow "检测到服务已存在，将覆盖安装。"
+        yellow "⚠️ 检测到服务已存在，将执行覆盖安装。"
     fi
 }
 
+# 提示用户配置
 prompt_user_config() {
-    cyan "--- 安装流程 ---"
+    cyan "--- 🌐 服务配置流程 (必填 Argo 信息) ---"
 
     read -p "$(yellow "1. 请输入 用户UUID (留空自动生成): ")" UUID_INPUT
     if [ -z "$UUID_INPUT" ]; then
@@ -211,8 +224,10 @@ prompt_user_config() {
         break
     done
 
+    # 修复: 使用 -s 隐藏密钥输入
     read -s -p "$(yellow "3. 请输入 固定隧道密钥 [$( [ -z "$ARGO_AUTH" ] && echo '必填' || echo '已配置')]: ")" ARGO_AUTH_INPUT
-    echo 
+    echo # 换行
+    
     [ -z "$ARGO_AUTH_INPUT" ] || ARGO_AUTH="$ARGO_AUTH_INPUT"
 
     read -p "$(yellow "4. 请输入 固定隧道域名 [$( [ -z "$ARGO_DOMAIN" ] && echo '必填' || echo "默认: $ARGO_DOMAIN" )]: ")" ARGO_DOMAIN_INPUT
@@ -235,47 +250,56 @@ prompt_user_config() {
     read -p "$(yellow "8. 请输入 节点名称前缀 [默认: $NAME]: ")" NAME_INPUT
     [ -z "$NAME_INPUT" ] || NAME="$NAME_INPUT"
 
-    read -p "$(yellow "9. 请输入 书签管理密码 [默认: $ADMIN_PASSWORD]: ")" ADMIN_PASSWORD_INPUT
+    # 修复: 使用 -s 隐藏密码输入
+    read -s -p "$(yellow "9. 请输入 书签管理密码 [默认: $ADMIN_PASSWORD]: ")" ADMIN_PASSWORD_INPUT
+    echo # 换行
     [ -z "$ADMIN_PASSWORD_INPUT" ] || ADMIN_PASSWORD="$ADMIN_PASSWORD_INPUT"
 }
 
 validate_and_confirm() {
     if [ -z "$ARGO_DOMAIN" ] || [ -z "$ARGO_AUTH" ]; then
         clear
-        red "错误: 固定隧道域名 和 固定隧道密钥 为必填项！"
+        red "❌ 错误: 固定隧道域名 和 固定隧道密钥 为必填项！"
         yellow "请重新运行安装流程并确保填写。"
         sleep 3
         return 1
     fi
 
     if ! check_port "$PORT"; then
-        red "错误: HTTP服务端口 $PORT 冲突，请修改后重试。"
+        red "❌ 错误: HTTP服务端口 $PORT 冲突，请修改后重试。"
         sleep 3
         return 1
     fi
 
     clear
-    cyan "--- 请确认配置 ---"
+    cyan "--- ✨ 最终配置确认 (OpenRC/Alpine) ---"
     
-    echo -e "UUID: $(green "$UUID")" $( [ "$UUID_GENERATED" = true ] && bright_green " (已自动生成)" || true )
-    echo -e "HTTP端口: $(green "$PORT")"
-    echo -e "隧道密钥: $(green "********")"$( [ "$OLD_CONFIG_LOADED" = true ] && yellow " (旧值)" || true )
-    echo -e "隧道域名: $(green "$ARGO_DOMAIN")"
-    echo -e "Argo端口: $(green "$ARGO_PORT")"
-    echo -e "优选IP/域名: $(green "$CFIP")"
-    echo -e "订阅路径: $(green "$SUB_PATH")"
-    echo -e "节点名称前缀: $(green "$NAME")"
-    echo -e "书签密码: $(green "********")"
+    # 统一对齐
+    echo -e "${CYAN} UUID:         ${RESET}$(green "$UUID")" $( [ "$UUID_GENERATED" = true ] && bright_green "(自动生成)" || true )
+    echo -e "${CYAN} HTTP端口:     ${RESET}$(green "$PORT")"
     
-    cyan "---------------------------------"
+    # 修复: 隐藏敏感信息
+    echo -e "${CYAN} 隧道密钥:     ${RESET}$(green "********")"$( [ "$OLD_CONFIG_LOADED" = true ] && yellow " (旧值)" || true )
+    
+    echo -e "${CYAN} 隧道域名:     ${RESET}$(green "$ARGO_DOMAIN")"
+    echo -e "${CYAN} Argo端口:     ${RESET}$(green "$ARGO_PORT")"
+    echo -e "${CYAN} 优选IP/域名:  ${RESET}$(green "$CFIP")"
+    echo -e "${CYAN} 订阅路径:     ${RESET}$(green "$SUB_PATH")"
+    echo -e "${CYAN} 节点名称前缀: ${RESET}$(green "$NAME")"
+    
+    # 修复: 隐藏敏感信息
+    echo -e "${CYAN} 书签密码:     ${RESET}$(green "********")"
+    
+    cyan "--------------------------------------"
     read -p "$(yellow "确认开始安装? (y/n): ")" confirm
     [[ ! "$confirm" =~ [yY] ]] && yellow "安装已取消" && return 1
     
     return 0
 }
 
+# 创建全局快捷方式
 create_shortcut() {
-    white "正在创建全局快捷命令..."
+    white "⚙️ 正在创建全局快捷命令..."
     
     mkdir -p /usr/local/bin
 
@@ -307,13 +331,14 @@ EOFSCRIPT
     chmod +x "$SHORTCUT_PATH"
     
     echo ""
-    bright_green "快捷命令已创建！"
-    echo -e "以后在终端直接输入 ${CYAN}${SHORTCUT_NAME}${RESET} 即可获取最新脚本并打开菜单。"
+    bright_green "✅ 快捷命令已创建！"
+    echo -e "以后在终端直接输入 ${CYAN}${BOLD}${SHORTCUT_NAME}${RESET} 即可获取最新脚本并打开菜单。"
     echo ""
 }
 
+# 执行核心安装
 perform_core_installation() {
-    bright_green "开始安装 (Alpine/OpenRC模式)... 日志: $LOG_FILE"
+    bright_green "🚀 开始安装 (Alpine/OpenRC)... 日志: $LOG_FILE"
     
     if [ -f "$SERVICE_FILE" ]; then
         rc-service "$APP_NAME" stop &>/dev/null || true
@@ -321,25 +346,27 @@ perform_core_installation() {
     
     install_nodejs
     
-    white "创建专用非Root用户 '$APP_NAME'..."
+    white "👥 创建专用非Root用户 '$APP_NAME'..."
+    # Alpine 使用 adduser -D 创建系统用户
     id -u "$APP_NAME" &>/dev/null || adduser -D -h "$INSTALL_DIR" -s /sbin/nologin "$APP_NAME"
 
-    white "下载项目文件..."
+    white "📦 下载并解压项目文件..."
     curl -L -o "$ZIP_FILE" "$ZIP_URL" >> "$LOG_FILE" 2>&1
     rm -rf "$INSTALL_DIR"; mkdir -p "$INSTALL_DIR"
     unzip -q "$ZIP_FILE" -d "$INSTALL_DIR"; rm -f "$ZIP_FILE"
 
     cd "$INSTALL_DIR"
-    white "安装 npm 依赖..."
+    white "🛠️ 安装 npm 依赖 (生产环境模式)..."
     
+    # 关键优化点：使用 --omit=dev 确保只安装生产环境依赖
     if ! npm install --omit=dev --silent 2>> "$LOG_FILE"; then
-        red "错误: npm install 失败！"
+        red "❌ 错误: npm install 失败！"
         yellow "最近的安装日志片段如下 ($LOG_FILE):"
         tail -n 10 "$LOG_FILE"
         exit 1
     fi
 
-    white "创建配置文件..."
+    white "配置文件..."
     cat > "$CONFIG_FILE_ENV" <<EOF
 PORT=${PORT}
 UUID=${UUID}
@@ -361,12 +388,12 @@ ADMIN_PASSWORD=${ADMIN_PASSWORD}
 NODE_ENV=production
 EOF
 
-    white "设置文件权限为 '$APP_NAME' 用户..."
+    white "🔐 设置文件权限..."
     chown -R "$APP_NAME":"$APP_NAME" "$INSTALL_DIR"
     chmod 600 "$CONFIG_FILE_ENV"
 
-    white "创建 OpenRC 服务脚本..."
-    
+    white "📝 创建 OpenRC 服务脚本..."
+    # OpenRC init.d 脚本
     cat > "$SERVICE_FILE" <<EOF
 #!/sbin/openrc-run
 
@@ -387,11 +414,13 @@ depend() {
 }
 
 start_pre() {
+    # 加载配置 (包括 NODE_ENV=production)
     if [ -f "$CONFIG_FILE_ENV" ]; then
         set -a
         source "$CONFIG_FILE_ENV"
         set +a
     fi
+    # 确保日志文件存在并设置权限
     checkpath -f -o \$command_user /var/log/${APP_NAME}.log
     checkpath -f -o \$command_user /var/log/${APP_NAME}.err
 }
@@ -399,16 +428,17 @@ EOF
 
     chmod +x "$SERVICE_FILE"
     
-    white "配置开机自启并启动..."
+    white "▶️ 配置开机自启并启动..."
     rc-update add "$APP_NAME" default >> "$LOG_FILE" 2>&1
     rc-service "$APP_NAME" start
 
     create_shortcut
 
-    yellow "1.服务已安装完成！服务已启动并开机自启"
-    yellow "2.请等待1分钟后,在菜单里使用 4.查看订阅链接"
+    yellow "1. 服务安装并启动完成。已设置开机自启 (OpenRC)。"
+    yellow "2. 请等待1分钟后, 在菜单里使用 ${CYAN}4.查看订阅链接${YELLOW}。"
 }
 
+# 安装服务
 install_service() {
     check_root
     mkdir -p "$(dirname "$LOG_FILE")"
@@ -420,6 +450,7 @@ install_service() {
     perform_core_installation
 }
 
+# 卸载服务
 uninstall_service() {
     check_root
     read -p "$(yellow "确定删除 '$APP_NAME' 及所有文件? (y/n): ")" confirm
@@ -444,48 +475,52 @@ uninstall_service() {
         white "清理旧版快捷命令: /usr/bin/$SHORTCUT_NAME"
     fi
     
-    bright_green "服务已卸载，用户和安装目录已删除。"
+    bright_green "✅ 服务已卸载，用户和安装目录已删除。"
     exit 0
 }
 
+# 重启服务
 restart_service() {
     check_root
     if [ ! -f "$SERVICE_FILE" ]; then
-        red "错误: 服务文件不存在，请先执行安装。"
+        red "❌ 错误: 服务文件不存在，请先执行安装 (选项 1)。"
         return 1
     fi
     
     if rc-service "$APP_NAME" restart 2>/dev/null; then
-        bright_green "服务已重启"
+        bright_green "✅ 服务已重启"
     else
-        red "重启失败，请查看状态 (选项 6) 获取更多信息。"
+        red "❌ 重启失败，请查看状态 (选项 6) 获取更多信息。"
     fi
 }
 
+# 查看服务状态
 view_status() {
     if [ ! -f "$SERVICE_FILE" ]; then
-        red "错误: 服务文件不存在，请先执行安装。"
+        red "❌ 错误: 服务文件不存在，请先执行安装 (选项 1)。"
         return 1
     fi
     rc-service "$APP_NAME" status
     echo ""
-    yellow "--- 错误日志末尾 ---"
-    tail -n 5 "/var/log/${APP_NAME}.err" 2>/dev/null
+    yellow "--- 错误日志末尾 ($APP_NAME.err) ---"
+    tail -n 10 "/var/log/${APP_NAME}.err" 2>/dev/null
 }
 
+# 查看订阅链接
 view_subscription() {
     if [ ! -f "$SERVICE_FILE" ]; then red "服务未安装"; sleep 2; return; fi
     if [ -f "$CONFIG_FILE_SUB" ] && [ -s "$CONFIG_FILE_SUB" ]; then
-        cyan "\n--- 订阅链接 ---"
+        cyan "\n*** 🔗 订阅链接 ***"
         cat "$CONFIG_FILE_SUB"
         echo
-        cyan "----------------"
+        cyan "********************"
     else
-        red "订阅文件不存在或为空"
+        red "❌ 订阅文件不存在或为空"
         yellow "请确保服务运行并等待1-2分钟后重试"
     fi
 }
 
+# 编辑配置变量
 edit_variables() {
     check_root
     [ ! -f "$CONFIG_FILE_ENV" ] && red "配置文件不存在，请先安装服务" && sleep 2 && return
@@ -495,7 +530,8 @@ edit_variables() {
     update_config_value() {
         local key=$1
         local val=$2
-        local SAFE_NEW_VALUE=$(echo "$val" | sed 's/[\/&]/\\&/g')
+        # 使用安全的 sed 替换
+        local SAFE_NEW_VALUE=$(echo "$val" | sed 's/[\/&]/\\&/g') 
         sed -i "s|^$key=.*|$key=$SAFE_NEW_VALUE|#" "$CONFIG_FILE_ENV"
     }
 
@@ -517,12 +553,12 @@ edit_variables() {
     save_and_restart() {
         reload_config
         if [ -z "$ARGO_DOMAIN" ] || [ -z "$ARGO_AUTH" ]; then
-            red "错误: Argo域名和密钥不能为空！"
+            red "❌ 错误: Argo域名和密钥不能为空！"
             sleep 2
             return 1
         fi
         rm "$CONFIG_FILE_ENV.bak"
-        bright_green "配置已保存，正在重启服务..."
+        bright_green "✅ 配置已保存，正在重启服务..."
         restart_service
         sleep 1
         return 0
@@ -531,144 +567,180 @@ edit_variables() {
     validate_port() {
         local val=$1; local name=$2
         if ! [[ "$val" =~ ^[0-9]+$ ]] || [ "$val" -lt 1 ] || [ "$val" -gt 65535 ]; then
-            red "错误: $name 必须是 1-65535 的有效端口号。"
+            red "❌ 错误: $name 必须是 1-65535 的有效端口号。"
             return 1
         fi
         if [ "$name" == "PORT" ]; then
             local CURRENT_PORT=$(grep '^PORT=' "$CONFIG_FILE_ENV" | cut -d '=' -f 2 | tr -d '\r')
             if [ "$val" != "$CURRENT_PORT" ] && lsof -i:"$val" &>/dev/null; then
-                red "错误: 端口 $val 已被占用。"
+                red "❌ 错误: 端口 $val 已被占用。"
                 return 1
             fi
         fi
         return 0
     }
 
+    # 基础设置子菜单
     submenu_basic() {
         while true; do
             printf "\033c"; reload_config
-            echo -e "${YELLOW}=== 基础设置 ===${RESET}"
-            echo -e "${GREEN}1.${RESET} 用户UUID     : $(show_var "$UUID")"
-            echo -e "${GREEN}2.${RESET} 节点名称前缀 : $(show_var "$NAME")"
-            echo -e "${GREEN}3.${RESET} HTTP服务端口 : $(show_var "$PORT")"
-            echo -e "${CYAN}------------------------${RESET}"
-            echo -e "${BRIGHT_GREEN}S.${RESET} 保存并重启服务"
-            echo -e "${GREEN}0.${RESET} 返回上一页"
+            echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+            echo -e "${CYAN}│     ${WHITE}基础设置 (UUID, 端口, 名称)   ${CYAN}│${RESET}"
+            echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+            echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
+            echo -e "${GREEN} 1. ${RESET}UUID: $(show_var "$UUID")"
+            echo -e "${GREEN} 2. ${RESET}节点名称: $(show_var "$NAME")"
+            echo -e "${GREEN} 3. ${RESET}服务端口: $(show_var "$PORT")"
+            echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+            echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
+            echo -e "${RED} 0. ${RESET}返回上一页"
+            echo -e "${CYAN}─────────────────────────────────────${RESET}"
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 UUID: " v; [ -z "$v" ] && v=$(generate_uuid); update_config_value "UUID" "$v" ;;
                 2) read -p "输入新 名称前缀: " v; update_config_value "NAME" "$v" ;;
                 3) read -p "输入新 HTTP端口: " v; validate_port "$v" "PORT" && update_config_value "PORT" "$v" ;;
-                [sS]) if save_and_restart; then return 10; fi ;;
+                [sS]) if save_and_restart; then return 10; fi ;; # <--- 修复点 2：将 } 更改为 fi
                 0) return 0 ;;
                 *) red "无效选项"; sleep 0.5 ;;
             esac
         done
     }
 
+    # Argo 隧道设置子菜单
     submenu_argo() {
         while true; do
             printf "\033c"; reload_config
-            echo -e "${YELLOW}=== Argo 隧道设置 ===${RESET}"
-            echo -e "${GREEN}1.${RESET} 固定隧道域名 : $(show_var "$ARGO_DOMAIN")"
-            echo -e "${GREEN}2.${RESET} 固定隧道密钥 : $(green "********")"
-            echo -e "${GREEN}3.${RESET} Argo隧道端口 : $(show_var "$ARGO_PORT")"
-            echo -e "${CYAN}------------------------${RESET}"
-            echo -e "${BRIGHT_GREEN}S.${RESET} 保存并重启服务"
-            echo -e "${GREEN}0.${RESET} 返回上一页"
+            echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+            echo -e "${CYAN}│     ${WHITE}Argo 隧道设置 (域名, 密钥)    ${CYAN}│${RESET}"
+            echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+            echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
+            echo -e "${GREEN} 1. ${RESET}固定隧道域名: $(show_var "$ARGO_DOMAIN")"
+            # 修复: 隐藏敏感信息
+            echo -e "${GREEN} 2. ${RESET}固定隧道密钥: $(green "********")"
+            echo -e "${GREEN} 3. ${RESET}Argo隧道端口: $(show_var "$ARGO_PORT")"
+            echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+            echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
+            echo -e "${RED} 0. ${RESET}返回上一页"
+            echo -e "${CYAN}─────────────────────────────────────${RESET}"
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 隧道域名: " v; update_config_value "ARGO_DOMAIN" "$v" ;;
-                2) read -s -p "输入新 隧道密钥: " v; echo; update_config_value "ARGO_AUTH" "$v" ;;
+                # 修复: 使用 -s 隐藏密钥输入
+                2) read -s -p "输入新 隧道密钥: " v; echo; update_config_value "ARGO_AUTH" "$v" ;; 
                 3) read -p "输入新 Argo端口: " v; validate_port "$v" "ARGO_PORT" && update_config_value "ARGO_PORT" "$v" ;;
-                [sS]) if save_and_restart; then return 10; fi ;;
+                [sS]) if save_and_restart; then return 10; fi ;; # <--- 修复点 3：将 } 更改为 fi
                 0) return 0 ;;
                 *) red "无效选项"; sleep 0.5 ;;
             esac
         done
     }
 
+
+    # 节点网络设置子菜单
     submenu_network() {
         while true; do
             printf "\033c"; reload_config
-            echo -e "${YELLOW}=== 节点网络设置 ===${RESET}"
-            echo -e "${GREEN}1.${RESET} 优选域名或IP : $(show_var "$CFIP")"
-            echo -e "${GREEN}2.${RESET} 节点端口     : $(show_var "$CFPORT")"
-            echo -e "${GREEN}3.${RESET} 订阅路径     : $(show_var "$SUB_PATH")"
-            echo -e "${CYAN}------------------------${RESET}"
-            echo -e "${BRIGHT_GREEN}S.${RESET} 保存并重启服务"
-            echo -e "${GREEN}0.${RESET} 返回上一页"
+            echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+            echo -e "${CYAN}│     ${WHITE}节点网络 (优选IP, 路径)       ${CYAN}│${RESET}"
+            echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+            echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
+            echo -e "${GREEN} 1. ${RESET}优选域名: $(show_var "$CFIP")"
+            echo -e "${GREEN} 2. ${RESET}节点端口: $(show_var "$CFPORT")"
+            echo -e "${GREEN} 3. ${RESET}订阅路径: $(show_var "$SUB_PATH")"
+            echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+            echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
+            echo -e "${RED} 0. ${RESET}返回上一页"
+            echo -e "${CYAN}─────────────────────────────────────${RESET}"
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 优选IP: " v; update_config_value "CFIP" "$v" ;;
                 2) read -p "输入新 节点端口: " v; update_config_value "CFPORT" "$v" ;;
                 3) read -p "输入新 订阅路径: " v; update_config_value "SUB_PATH" "$v" ;;
-                [sS]) if save_and_restart; then return 10; fi ;;
+                [sS]) if save_and_restart; then return 10; fi ;; # <--- 修复点 4：将 } 更改为 fi
                 0) return 0 ;;
                 *) red "无效选项"; sleep 0.5 ;;
             esac
         done
     }
 
+    # 哪吒监控设置子菜单
     submenu_nezha() {
         while true; do
             printf "\033c"; reload_config
-            echo -e "${YELLOW}=== 哪吒监控设置 ===${RESET}"
-            echo -e "${GREEN}1.${RESET} 哪吒服务器  : $(show_var "$NEZHA_SERVER")"
-            echo -e "${GREEN}2.${RESET} 哪吒端口    : $(show_var "$NEZHA_PORT")"
-            echo -e "${GREEN}3.${RESET} 哪吒密钥    : $(show_var "$NEZHA_KEY")"
-            echo -e "${CYAN}------------------------${RESET}"
-            echo -e "${BRIGHT_GREEN}S.${RESET} 保存并重启服务"
-            echo -e "${GREEN}0.${RESET} 返回上一页"
+            echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+            echo -e "${CYAN}│     ${WHITE}哪吒监控 (服务器, 密钥)       ${CYAN}│${RESET}"
+            echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+            echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
+            echo -e "${GREEN} 1. ${RESET}哪吒服务: $(show_var "$NEZHA_SERVER")"
+            echo -e "${GREEN} 2. ${RESET}哪吒端口: $(show_var "$NEZHA_PORT")"
+            echo -e "${GREEN} 3. ${RESET}哪吒密钥: $(show_var "$NEZHA_KEY")"
+            echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+            echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
+            echo -e "${RED} 0. ${RESET}返回上一页"
+            echo -e "${CYAN}─────────────────────────────────────${RESET}"
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 哪吒服务器: " v; update_config_value "NEZHA_SERVER" "$v" ;;
                 2) read -p "输入新 哪吒端口: " v; update_config_value "NEZHA_PORT" "$v" ;;
                 3) read -p "输入新 哪吒密钥: " v; update_config_value "NEZHA_KEY" "$v" ;;
-                [sS]) if save_and_restart; then return 10; fi ;;
+                [sS]) if save_and_restart; then return 10; fi ;; # <--- 修复点 5：将 } 更改为 fi
                 0) return 0 ;;
                 *) red "无效选项"; sleep 0.5 ;;
             esac
         done
     }
 
+    # 高级选项子菜单
     submenu_advanced() {
         while true; do
             printf "\033c"; reload_config
-            echo -e "${YELLOW}=== 高级设置 ===${RESET}"
-            echo -e "${GREEN}1.${RESET} 订阅上传地址 : $(show_var "$UPLOAD_URL")"
-            echo -e "${GREEN}2.${RESET} 项目分配域名 : $(show_var "$PROJECT_URL")"
-            echo -e "${GREEN}3.${RESET} 自动访问保活 : $(show_var "$AUTO_ACCESS")"
-            echo -e "${GREEN}4.${RESET} 运行目录     : $(show_var "$FILE_PATH")"
-            echo -e "${GREEN}5.${RESET} 书签管理密码 : $(green "********")"
-            echo -e "${CYAN}------------------------${RESET}"
-            echo -e "${BRIGHT_GREEN}S.${RESET} 保存并重启服务"
-            echo -e "${GREEN}0.${RESET} 返回上一页"
+            echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+            echo -e "${CYAN}│     ${WHITE}高级选项 (保活, 密码, 路径)   ${CYAN}│${RESET}"
+            echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+            echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
+            echo -e "${GREEN} 1. ${RESET}订阅上传地址: $(show_var "$UPLOAD_URL")"
+            echo -e "${GREEN} 2. ${RESET}项目分配域名: $(show_var "$PROJECT_URL")"
+            echo -e "${GREEN} 3. ${RESET}自动访问保活: $(show_var "$AUTO_ACCESS")"
+            echo -e "${GREEN} 4. ${RESET}项目运行目录: $(show_var "$FILE_PATH")"
+            # 修复: 隐藏敏感信息
+            echo -e "${GREEN} 5. ${RESET}后台管理密码: $(green "********")"
+            echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+            echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
+            echo -e "${RED} 0. ${RESET}返回上一页"
+            echo -e "${CYAN}─────────────────────────────────────${RESET}"
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 上传地址: " v; update_config_value "UPLOAD_URL" "$v" ;;
                 2) read -p "输入新 项目域名: " v; update_config_value "PROJECT_URL" "$v" ;;
                 3) read -p "是否开启保活 (true/false): " v; update_config_value "AUTO_ACCESS" "$v" ;;
                 4) read -p "输入新 运行目录: " v; update_config_value "FILE_PATH" "$v" ;;
+                # 修复: 使用 -s 隐藏密码输入
                 5) read -s -p "输入新 管理密码: " v; echo; update_config_value "ADMIN_PASSWORD" "$v" ;;
-                [sS]) if save_and_restart; then return 10; fi ;;
+                [sS]) if save_and_restart; then return 10; fi ;; # <--- 修复点 6：将 } 更改为 fi
                 0) return 0 ;;
                 *) red "无效选项"; sleep 0.5 ;;
             esac
         done
     }
 
+
+    # 配置主菜单
     while true; do
         printf "\033c"
-        echo -e "${CYAN}========== 配置分类菜单 ==========${RESET}"
-        echo -e "${GREEN}1.${RESET} 基础设置 $(yellow "(UUID, 端口, 名称)")"
-        echo -e "${GREEN}2.${RESET} Argo设置 $(yellow "(域名, 密钥, 隧道端口)")"
-        echo -e "${GREEN}3.${RESET} 节点网络 $(yellow "(优选IP, 路径, 节点端口)")"
-        echo -e "${GREEN}4.${RESET} 哪吒监控 $(yellow "(服务器, 密钥)")"
-        echo -e "${GREEN}5.${RESET} 高级选项 $(yellow "(保活, 密码, 其他参数)")"
-        echo -e "${CYAN}---------------------------------${RESET}"
-        echo -e "${GREEN}0.${RESET} 返回上一页"
-        echo -e "${CYAN}=================================${RESET}"
+        echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+        echo -e "${CYAN}│            ${WHITE}配置参数菜单           ${CYAN}│${RESET}"
+        echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+        
+        echo -e "${YELLOW}═══ ${WHITE}配置分类${YELLOW} ════════════════════════${RESET}"
+        echo -e "${GREEN} 1. ${RESET}基础设置"
+        echo -e "${GREEN} 2. ${RESET}Argo设置"
+        echo -e "${GREEN} 3. ${RESET}节点网络"
+        echo -e "${GREEN} 4. ${RESET}哪吒监控"
+        echo -e "${GREEN} 5. ${RESET}高级选项"
+        echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+        echo -e "${RED} 0. ${RESET}返回上一页"
+        echo -e "${CYAN}─────────────────────────────────────${RESET}"
         
         read -rp "$(yellow "请输入选项: ")" choice
 
@@ -690,6 +762,7 @@ edit_variables() {
     done
 }
 
+# 主函数
 main() {
     clear
     check_root
@@ -698,37 +771,43 @@ main() {
 
     while true; do
         clear
-        echo -e "${CYAN}=================================${RESET}"
-        echo -e "${CYAN}    node-nav (alpine版)      ${RESET}"
-        echo -e "${CYAN}=================================${RESET}"
-        check_status_for_menu
+        
+        # --- 菜单头部优化 ---
+        echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+        echo -e "${CYAN}│   ${WHITE}node-nav 服务管理脚本 (Alpine)  ${CYAN}│${RESET}"
+        echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+        
+        # --- 状态栏优化 ---
+        check_status_for_menu 
         
         SERVICE_INSTALLED=false
         if [ -f "$SERVICE_FILE" ]; then
             SERVICE_INSTALLED=true
-            install_option_text="重装服务"
+            install_option_text="重装服务" 
             READ_PROMPT="请输入选项 [0-6]: "
         else
             install_option_text="安装服务"
             READ_PROMPT="请输入选项 [0-1]: "
         fi
 
-        echo -e "${YELLOW}=== 基础功能 ===${RESET}"
-        echo -e "${GREEN}1.${RESET} ${install_option_text}"
+        # --- 核心功能区 ---
+        echo -e "${YELLOW}═══ ${WHITE}核心功能${YELLOW} ════════════════════════${RESET}"
+        echo -e "${GREEN} 1. ${RESET}${install_option_text}"
 
         if [ "$SERVICE_INSTALLED" = true ]; then
-            echo -e "${GREEN}2.${RESET} 卸载服务"
-            echo -e "${GREEN}3.${RESET} 重启服务"
-            echo -e "${GREEN}4.${RESET} 查看订阅链接"
-            echo -e "${CYAN}---------------------------------${RESET}"
-            echo -e "${YELLOW}=== 管理功能 ===${RESET}"
-            echo -e "${GREEN}5.${RESET} 修改配置"
-            echo -e "${GREEN}6.${RESET} 查看服务状态"
-            echo -e "${CYAN}---------------------------------${RESET}"
+            echo -e "${GREEN} 2. ${RESET}卸载服务"
+            echo -e "${GREEN} 3. ${RESET}重启服务"
+            echo -e "${GREEN} 4. ${RESET}${CYAN}查看订阅链接${RESET}" 
+            
+            # --- 管理功能区 ---
+            echo -e "${YELLOW}═══ ${WHITE}服务管理${YELLOW} ════════════════════════${RESET}"
+            echo -e "${GREEN} 5. ${RESET}修改配置"
+            echo -e "${GREEN} 6. ${RESET}查看服务状态"
         fi
 
-        echo -e "${GREEN}0.${RESET} 退出脚本"
-        echo -e "${CYAN}=================================${RESET}"
+        echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+        echo -e "${RED} 0. ${RESET}退出脚本"
+        echo -e "${CYAN}─────────────────────────────────────${RESET}"
         
         read -rp "$(yellow "$READ_PROMPT")" num
 
@@ -750,7 +829,7 @@ main() {
             *) red "无效选项" ;;
         esac
         
-        [[ "$num" =~ ^[1234]$ ]] && {
+        [[ "$num" =~ ^[12346]$ ]] && {
             read -n 1 -s -r -p "按任意键返回主菜单..."
             echo ""
         }
