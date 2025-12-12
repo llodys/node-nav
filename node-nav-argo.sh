@@ -87,6 +87,7 @@ generate_uuid() {
     head -c 16 /dev/urandom | xxd -p
 }
 
+# 【Node.js LTS 优化】
 check_system() {
     if ! command -v systemctl &>/dev/null; then
         red "错误: 未找到 systemd (systemctl)。"
@@ -104,11 +105,11 @@ check_system() {
     case $OS_ID in
         ubuntu|debian)
             PKG_MANAGER="apt"
-            NODE_SETUP_URL="https://deb.nodesource.com/setup_24.x"
+            NODE_SETUP_URL="https://deb.nodesource.com/setup_lts.x" 
             ;;
         centos|rhel|almalinux|rocky)
             PKG_MANAGER=$(command -v dnf &>/dev/null && echo "dnf" || echo "yum")
-            NODE_SETUP_URL="https://rpm.nodesource.com/setup_24.x"
+            NODE_SETUP_URL="https://rpm.nodesource.com/setup_lts.x" 
             ;;
         *)
             red "不支持的操作系统: $OS_ID"
@@ -136,6 +137,7 @@ check_dependencies() {
     fi
 }
 
+# 【Node.js LTS 优化】
 install_nodejs() {
     if command -v node &>/dev/null; then
         NODE_MAJOR_VERSION=$(node -v | sed 's/v\([0-9]\+\).*/\1/')
@@ -145,8 +147,8 @@ install_nodejs() {
         white "未检测到 Node.js"
     fi
 
-    if [ "$NODE_MAJOR_VERSION" -lt 24 ]; then
-        yellow "Node.js 版本低于 v24 (LTS)，正在安装/升级..."
+    if [ "$NODE_MAJOR_VERSION" -lt 24 ]; then 
+        yellow "Node.js 版本低于 v24，正在安装/升级到最新 LTS 版本..."
         curl -fsSL "$NODE_SETUP_URL" | bash >> "$LOG_FILE" 2>&1
         "$PKG_MANAGER" install -y nodejs >> "$LOG_FILE" 2>&1
         white "Node.js 已安装: $(node -v)"
@@ -227,8 +229,8 @@ prompt_user_config() {
         break
     done
 
-    read -s -p "$(yellow "3. 请输入 固定隧道密钥 [$( [ -z "$ARGO_AUTH" ] && echo '必填' || echo '已配置')]: ")" ARGO_AUTH_INPUT
-    echo 
+    read -p "$(yellow "3. 请输入 固定隧道密钥 [$( [ -z "$ARGO_AUTH" ] && echo '必填' || echo '已配置')]: ")" ARGO_AUTH_INPUT
+    
     [ -z "$ARGO_AUTH_INPUT" ] || ARGO_AUTH="$ARGO_AUTH_INPUT"
 
     read -p "$(yellow "4. 请输入 固定隧道域名 [$( [ -z "$ARGO_DOMAIN" ] && echo '必填' || echo "默认: $ARGO_DOMAIN" )]: ")" ARGO_DOMAIN_INPUT
@@ -275,13 +277,13 @@ validate_and_confirm() {
     
     echo -e "UUID: $(green "$UUID")" $( [ "$UUID_GENERATED" = true ] && bright_green " (已自动生成)" || true )
     echo -e "HTTP端口: $(green "$PORT")"
-    echo -e "隧道密钥: $(green "********")"$( [ "$OLD_CONFIG_LOADED" = true ] && yellow " (旧值)" || true )
+    echo -e "隧道密钥: $(green "$ARGO_AUTH")"$( [ "$OLD_CONFIG_LOADED" = true ] && yellow " (旧值)" || true )
     echo -e "隧道域名: $(green "$ARGO_DOMAIN")"
     echo -e "Argo端口: $(green "$ARGO_PORT")"
     echo -e "优选IP/域名: $(green "$CFIP")"
     echo -e "订阅路径: $(green "$SUB_PATH")"
     echo -e "节点名称前缀: $(green "$NAME")"
-    echo -e "书签密码: $(green "********")"
+    echo -e "书签密码: $(green "$ADMIN_PASSWORD")"
     
     cyan "---------------------------------"
     read -p "$(yellow "确认开始安装? (y/n): ")" confirm
@@ -550,16 +552,21 @@ edit_variables() {
         return 0
     }
 
+    # 【统一风格 & 修复对齐】
     submenu_basic() {
         while true; do
             printf "\033c"; reload_config
-            echo -e "${YELLOW}=== 基础设置 ===${RESET}"
-            echo -e "${GREEN}1.${RESET} 用户UUID     : $(show_var "$UUID")"
-            echo -e "${GREEN}2.${RESET} 节点名称前缀 : $(show_var "$NAME")"
-            echo -e "${GREEN}3.${RESET} HTTP服务端口 : $(show_var "$PORT")"
-            echo -e "${CYAN}------------------------${RESET}"
-            echo -e "${BRIGHT_GREEN}S.${RESET} 保存并重启服务"
-            echo -e "${GREEN}0.${RESET} 返回上一页"
+            echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+            echo -e "${CYAN}│     ${WHITE}基础设置 (UUID, 端口, 名称)   ${CYAN}│${RESET}"
+            echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+            echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ═════════════════════════${RESET}"
+            echo -e "${GREEN} 1. ${RESET}UUID: $(show_var "$UUID")"
+            echo -e "${GREEN} 2. ${RESET}节点名称: $(show_var "$NAME")"
+            echo -e "${GREEN} 3. ${RESET}服务端口: $(show_var "$PORT")"
+            echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+            echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
+            echo -e "${RED} 0. ${RESET}返回上一页"
+            echo -e "${CYAN}─────────────────────────────────────${RESET}"
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 UUID: " v; [ -z "$v" ] && v=$(generate_uuid); update_config_value "UUID" "$v" ;;
@@ -572,20 +579,25 @@ edit_variables() {
         done
     }
 
+    # 【统一风格 & 修复对齐】
     submenu_argo() {
         while true; do
             printf "\033c"; reload_config
-            echo -e "${YELLOW}=== Argo 隧道设置 ===${RESET}"
-            echo -e "${GREEN}1.${RESET} 固定隧道域名 : $(show_var "$ARGO_DOMAIN")"
-            echo -e "${GREEN}2.${RESET} 固定隧道密钥 : $(green "********")"
-            echo -e "${GREEN}3.${RESET} Argo隧道端口 : $(show_var "$ARGO_PORT")"
-            echo -e "${CYAN}------------------------${RESET}"
-            echo -e "${BRIGHT_GREEN}S.${RESET} 保存并重启服务"
-            echo -e "${GREEN}0.${RESET} 返回上一页"
+            echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+            echo -e "${CYAN}│     ${WHITE}Argo 隧道设置 (域名, 密钥)    ${CYAN}│${RESET}"
+            echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+            echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ═════════════════════════${RESET}"
+            echo -e "${GREEN} 1. ${RESET}固定隧道域名: $(show_var "$ARGO_DOMAIN")"
+            echo -e "${GREEN} 2. ${RESET}固定隧道密钥: $(green "$ARGO_AUTH")"
+            echo -e "${GREEN} 3. ${RESET}Argo隧道端口: $(show_var "$ARGO_PORT")"
+            echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+            echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
+            echo -e "${RED} 0. ${RESET}返回上一页"
+            echo -e "${CYAN}─────────────────────────────────────${RESET}"
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 隧道域名: " v; update_config_value "ARGO_DOMAIN" "$v" ;;
-                2) read -s -p "输入新 隧道密钥: " v; echo; update_config_value "ARGO_AUTH" "$v" ;;
+                2) read -s -p "输入新 隧道密钥: " v; echo; update_config_value "ARGO_AUTH" "$v" ;; 
                 3) read -p "输入新 Argo端口: " v; validate_port "$v" "ARGO_PORT" && update_config_value "ARGO_PORT" "$v" ;;
                 [sS]) if save_and_restart; then return 10; fi ;;
                 0) return 0 ;;
@@ -594,16 +606,21 @@ edit_variables() {
         done
     }
 
+    # 【统一风格 & 修复对齐】
     submenu_network() {
         while true; do
             printf "\033c"; reload_config
-            echo -e "${YELLOW}=== 节点网络设置 ===${RESET}"
-            echo -e "${GREEN}1.${RESET} 优选域名或IP : $(show_var "$CFIP")"
-            echo -e "${GREEN}2.${RESET} 节点端口     : $(show_var "$CFPORT")"
-            echo -e "${GREEN}3.${RESET} 订阅路径     : $(show_var "$SUB_PATH")"
-            echo -e "${CYAN}------------------------${RESET}"
-            echo -e "${BRIGHT_GREEN}S.${RESET} 保存并重启服务"
-            echo -e "${GREEN}0.${RESET} 返回上一页"
+            echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+            echo -e "${CYAN}│     ${WHITE}节点网络 (优选IP, 路径)       ${CYAN}│${RESET}"
+            echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+            echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ═════════════════════════${RESET}"
+            echo -e "${GREEN} 1. ${RESET}优选域名: $(show_var "$CFIP")"
+            echo -e "${GREEN} 2. ${RESET}节点端口: $(show_var "$CFPORT")"
+            echo -e "${GREEN} 3. ${RESET}订阅路径: $(show_var "$SUB_PATH")"
+            echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+            echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
+            echo -e "${RED} 0. ${RESET}返回上一页"
+            echo -e "${CYAN}─────────────────────────────────────${RESET}"
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 优选IP: " v; update_config_value "CFIP" "$v" ;;
@@ -619,13 +636,17 @@ edit_variables() {
     submenu_nezha() {
         while true; do
             printf "\033c"; reload_config
-            echo -e "${YELLOW}=== 哪吒监控设置 ===${RESET}"
-            echo -e "${GREEN}1.${RESET} 哪吒服务器  : $(show_var "$NEZHA_SERVER")"
-            echo -e "${GREEN}2.${RESET} 哪吒端口    : $(show_var "$NEZHA_PORT")"
-            echo -e "${GREEN}3.${RESET} 哪吒密钥    : $(show_var "$NEZHA_KEY")"
-            echo -e "${CYAN}------------------------${RESET}"
-            echo -e "${BRIGHT_GREEN}S.${RESET} 保存并重启服务"
-            echo -e "${GREEN}0.${RESET} 返回上一页"
+            echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+            echo -e "${CYAN}│     ${WHITE}哪吒监控 (服务器, 密钥)       ${CYAN}│${RESET}"
+            echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+            echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ═══════════════════════${RESET}"
+            echo -e "${GREEN} 1. ${RESET}哪吒服务: $(show_var "$NEZHA_SERVER")"
+            echo -e "${GREEN} 2. ${RESET}哪吒端口: $(show_var "$NEZHA_PORT")"
+            echo -e "${GREEN} 3. ${RESET}哪吒密钥: $(show_var "$NEZHA_KEY")"
+            echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+            echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
+            echo -e "${RED} 0. ${RESET}返回上一页"
+            echo -e "${CYAN}─────────────────────────────────────${RESET}"
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 哪吒服务器: " v; update_config_value "NEZHA_SERVER" "$v" ;;
@@ -641,15 +662,19 @@ edit_variables() {
     submenu_advanced() {
         while true; do
             printf "\033c"; reload_config
-            echo -e "${YELLOW}=== 高级设置 ===${RESET}"
-            echo -e "${GREEN}1.${RESET} 订阅上传地址 : $(show_var "$UPLOAD_URL")"
-            echo -e "${GREEN}2.${RESET} 项目分配域名 : $(show_var "$PROJECT_URL")"
-            echo -e "${GREEN}3.${RESET} 自动访问保活 : $(show_var "$AUTO_ACCESS")"
-            echo -e "${GREEN}4.${RESET} 运行目录     : $(show_var "$FILE_PATH")"
-            echo -e "${GREEN}5.${RESET} 书签管理密码 : $(green "********")"
-            echo -e "${CYAN}------------------------${RESET}"
-            echo -e "${BRIGHT_GREEN}S.${RESET} 保存并重启服务"
-            echo -e "${GREEN}0.${RESET} 返回上一页"
+            echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+            echo -e "${CYAN}│     ${WHITE}高级选项 (保活, 密码, 路径)   ${CYAN}│${RESET}"
+            echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+            echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ═══════════════════════${RESET}"
+            echo -e "${GREEN} 1. ${RESET}订阅上传地址: $(show_var "$UPLOAD_URL")"
+            echo -e "${GREEN} 2. ${RESET}项目分配域名: $(show_var "$PROJECT_URL")"
+            echo -e "${GREEN} 3. ${RESET}自动访问保活: $(show_var "$AUTO_ACCESS")"
+            echo -e "${GREEN} 4. ${RESET}项目运行目录: $(show_var "$FILE_PATH")"
+            echo -e "${GREEN} 5. ${RESET}后台管理密码: $(green "$ADMIN_PASSWORD")"
+            echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+            echo -e "${BRIGHT_GREEN} S. ${RESET}保存并重启服务"
+            echo -e "${RED} 0. ${RESET}返回上一页"
+            echo -e "${CYAN}─────────────────────────────────────${RESET}"
             read -rp "$(yellow "请选择: ")" sub_choice
             case $sub_choice in
                 1) read -p "输入新 上传地址: " v; update_config_value "UPLOAD_URL" "$v" ;;
@@ -666,15 +691,19 @@ edit_variables() {
 
     while true; do
         printf "\033c"
-        echo -e "${CYAN}========== 配置分类菜单 ==========${RESET}"
-        echo -e "${GREEN}1.${RESET} 基础设置 $(yellow "(UUID, 端口, 名称)")"
-        echo -e "${GREEN}2.${RESET} Argo设置 $(yellow "(域名, 密钥, 隧道端口)")"
-        echo -e "${GREEN}3.${RESET} 节点网络 $(yellow "(优选IP, 路径, 节点端口)")"
-        echo -e "${GREEN}4.${RESET} 哪吒监控 $(yellow "(服务器, 密钥)")"
-        echo -e "${GREEN}5.${RESET} 高级选项 $(yellow "(保活, 密码, 其他参数)")"
-        echo -e "${CYAN}---------------------------------${RESET}"
-        echo -e "${GREEN}0.${RESET} 返回上一页"
-        echo -e "${CYAN}=================================${RESET}"
+        echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+        echo -e "${CYAN}│            ${WHITE}配置参数菜单           ${CYAN}│${RESET}"  # 修复对齐：将 9 个空格调整为 10 个空格
+        echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+        
+        echo -e "${YELLOW}═══ ${WHITE}配置分类${YELLOW} ════════════════════════${RESET}"
+        echo -e "${GREEN} 1. ${RESET}基础设置"
+        echo -e "${GREEN} 2. ${RESET}Argo设置"
+        echo -e "${GREEN} 3. ${RESET}节点网络"
+        echo -e "${GREEN} 4. ${RESET}哪吒监控"
+        echo -e "${GREEN} 5. ${RESET}高级选项"
+        echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+        echo -e "${RED} 0. ${RESET}返回上一页"
+        echo -e "${CYAN}─────────────────────────────────────${RESET}"
         
         read -rp "$(yellow "请输入选项: ")" choice
 
@@ -704,37 +733,43 @@ main() {
 
     while true; do
         clear
-        echo -e "${CYAN}=================================${RESET}"
-        echo -e "${CYAN}    node-nav 管理脚本         ${RESET}"
-        echo -e "${CYAN}=================================${RESET}"
-        check_status_for_menu
+        
+        # --- 菜单头部优化 ---
+        echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
+        echo -e "${CYAN}│     ${WHITE}node-nav 服务管理脚本 v1.0    ${CYAN}│${RESET}"
+        echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
+        
+        # --- 状态栏优化 ---
+        check_status_for_menu 
         
         SERVICE_INSTALLED=false
         if [ -f "$SERVICE_FILE" ]; then
             SERVICE_INSTALLED=true
-            install_option_text="重装服务"
+            install_option_text="重装服务" 
             READ_PROMPT="请输入选项 [0-6]: "
         else
             install_option_text="安装服务"
             READ_PROMPT="请输入选项 [0-1]: "
         fi
 
-        echo -e "${YELLOW}=== 基础功能 ===${RESET}"
-        echo -e "${GREEN}1.${RESET} ${install_option_text}"
+        # --- 核心功能区 ---
+        echo -e "${YELLOW}═══ ${WHITE}核心功能${YELLOW} ════════════════════════${RESET}"
+        echo -e "${GREEN} 1. ${RESET}${install_option_text}"
 
         if [ "$SERVICE_INSTALLED" = true ]; then
-            echo -e "${GREEN}2.${RESET} 卸载服务"
-            echo -e "${GREEN}3.${RESET} 重启服务"
-            echo -e "${GREEN}4.${RESET} 查看订阅链接"
-            echo -e "${CYAN}---------------------------------${RESET}"
-            echo -e "${YELLOW}=== 管理功能 ===${RESET}"
-            echo -e "${GREEN}5.${RESET} 修改配置"
-            echo -e "${GREEN}6.${RESET} 查看服务状态"
-            echo -e "${CYAN}---------------------------------${RESET}"
+            echo -e "${GREEN} 2. ${RESET}卸载服务"
+            echo -e "${GREEN} 3. ${RESET}重启服务"
+            echo -e "${GREEN} 4. ${RESET}${CYAN}查看订阅链接${RESET}" 
+            
+            # --- 管理功能区 ---
+            echo -e "${YELLOW}═══ ${WHITE}服务管理${YELLOW} ════════════════════════${RESET}"
+            echo -e "${GREEN} 5. ${RESET}修改配置"
+            echo -e "${GREEN} 6. ${RESET}查看服务状态"
         fi
 
-        echo -e "${GREEN}0.${RESET} 退出脚本"
-        echo -e "${CYAN}=================================${RESET}"
+        echo -e "${YELLOW}═════════════════════════════════════${RESET}"
+        echo -e "${RED} 0. ${RESET}退出脚本"
+        echo -e "${CYAN}─────────────────────────────────────${RESET}"
         
         read -rp "$(yellow "$READ_PROMPT")" num
 
