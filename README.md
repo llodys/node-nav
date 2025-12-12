@@ -31,7 +31,7 @@
 | `ARGO_DOMAIN` | 空 | 否 | Argo Tunnel 域名 |
 | `ARGO_AUTH` | 空 | 视情况 | Argo Tunnel 密钥 |
 | `ARGO_PORT` | `8001` | 否 | Argo 监听端口 |
-| `CFIP` | `cf.008500.xyz` | 否 | Cloudflare 优选 IP |
+| `CFIP` | `cdns.doon.eu.org` | 否 | Cloudflare 优选 IP |
 | `SUB_PATH` | `sub` | 否 | 节点订阅路径（如 `/sub/`） |
 | `NAME` | `node` | 否 | 节点名称前缀 |
 | `ADMIN_PASSWORD` | `123456` | 是（建议修改） | 后台登录密码 |
