@@ -8,9 +8,15 @@
 
 ## 🖼️ 项目预览
 
-<div style="display: flex; gap: 10px;">
-  <img src="https://raw.githubusercontent.com/llodys/node-nav/main/photo/nav.png" width="45%">
-  <img src="https://raw.githubusercontent.com/llodys/node-nav/main/photo/nav.admin.png" width="45%">
+<div style="display: flex; justify-content: space-around; gap: 20px; padding: 10px;">
+  <img src="https://raw.githubusercontent.com/llodys/node-nav/main/photo/nav.png" 
+       width="45%" 
+       style="border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);"
+       alt="项目主导航页面">
+  <img src="https://raw.githubusercontent.com/llodys/node-nav/main/photo/nav.admin.png" 
+       width="45%" 
+       style="border: 2px solid #ddd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);"
+       alt="项目后台管理页面">
 </div>
 
 ---
