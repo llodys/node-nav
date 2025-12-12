@@ -575,7 +575,7 @@ edit_variables() {
         while true; do
             clear; reload_config # <--- 已修改
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-            echo -e "${CYAN}│      ${WHITE}基础设置 (UUID, 端口, 名称)    ${CYAN}│${RESET}"
+            echo -e "${CYAN}│     ${WHITE}基础设置 (UUID, 端口, 名称)   ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}UUID: $(show_var "$UUID")"
@@ -602,7 +602,7 @@ edit_variables() {
         while true; do
             clear; reload_config # <--- 已修改
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-            echo -e "${CYAN}│      ${WHITE}Argo 隧道设置 (域名, 密钥)     ${CYAN}│${RESET}"
+            echo -e "${CYAN}│     ${WHITE}Argo 隧道设置 (域名, 密钥)    ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}固定隧道域名: $(show_var "$ARGO_DOMAIN")"
@@ -630,7 +630,7 @@ edit_variables() {
         while true; do
             clear; reload_config # <--- 已修改
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-            echo -e "${CYAN}│      ${WHITE}节点网络 (优选IP, 路径)        ${CYAN}│${RESET}"
+            echo -e "${CYAN}│     ${WHITE}节点网络 (优选IP, 路径)       ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}优选域名: $(show_var "$CFIP")"
@@ -657,7 +657,7 @@ edit_variables() {
         while true; do
             clear; reload_config # <--- 已修改
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-            echo -e "${CYAN}│      ${WHITE}哪吒监控 (服务器, 密钥)        ${CYAN}│${RESET}"
+            echo -e "${CYAN}│     ${WHITE}哪吒监控 (服务器, 密钥)       ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}哪吒服务: $(show_var "$NEZHA_SERVER")"
@@ -684,7 +684,7 @@ edit_variables() {
         while true; do
             clear; reload_config # <--- 已修改
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-            echo -e "${CYAN}│      ${WHITE}高级选项 (保活, 密码, 路径)    ${CYAN}│${RESET}"
+            echo -e "${CYAN}│     ${WHITE}高级选项 (保活, 密码, 路径)   ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}订阅上传地址: $(show_var "$UPLOAD_URL")"
@@ -716,7 +716,7 @@ edit_variables() {
     while true; do
         clear # <--- 已修改
         echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-        echo -e "${CYAN}│          ${WHITE}配置参数菜单           ${CYAN}│${RESET}"
+        echo -e "${CYAN}│            ${WHITE}配置参数菜单           ${CYAN}│${RESET}"
         echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
         
         echo -e "${YELLOW}═══ ${WHITE}配置分类${YELLOW} ════════════════════════${RESET}"
