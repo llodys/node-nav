@@ -149,7 +149,12 @@ install_nodejs() {
         yellow "Node.js 版本低于 v24，正在安装/升级到最新 LTS 版本..."
         curl -fsSL "$NODE_SETUP_URL" | bash >> "$LOG_FILE" 2>&1
         "$PKG_MANAGER" install -y nodejs >> "$LOG_FILE" 2>&1
-        white "Node.js 已安装: $(node -v)"
+        if command -v node &>/dev/null; then
+             white "Node.js 已安装: $(node -v)"
+        else
+            red "Node.js 安装失败！请检查日志 $LOG_FILE"
+            exit 1
+        fi
     fi
 }
 
@@ -550,10 +555,10 @@ edit_variables() {
         return 0
     }
 
-    # 【统一风格 & 修复对齐】
+    # 已修复: 将 printf "\033c" 替换为 clear
     submenu_basic() {
         while true; do
-            printf "\033c"; reload_config
+            clear; reload_config
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
             echo -e "${CYAN}│     ${WHITE}基础设置 (UUID, 端口, 名称)   ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -577,10 +582,10 @@ edit_variables() {
         done
     }
 
-    # 【统一风格 & 修复对齐】
+    # 已修复: 将 printf "\033c" 替换为 clear
     submenu_argo() {
         while true; do
-            printf "\033c"; reload_config
+            clear; reload_config
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
             echo -e "${CYAN}│     ${WHITE}Argo 隧道设置 (域名, 密钥)    ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -604,10 +609,10 @@ edit_variables() {
         done
     }
 
-    # 【统一风格 & 修复对齐】
+    # 已修复: 将 printf "\033c" 替换为 clear
     submenu_network() {
         while true; do
-            printf "\033c"; reload_config
+            clear; reload_config
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
             echo -e "${CYAN}│     ${WHITE}节点网络 (优选IP, 路径)       ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -631,9 +636,10 @@ edit_variables() {
         done
     }
 
+    # 已修复: 将 printf "\033c" 替换为 clear
     submenu_nezha() {
         while true; do
-            printf "\033c"; reload_config
+            clear; reload_config
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
             echo -e "${CYAN}│     ${WHITE}哪吒监控 (服务器, 密钥)       ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -657,9 +663,10 @@ edit_variables() {
         done
     }
 
+    # 已修复: 将 printf "\033c" 替换为 clear
     submenu_advanced() {
         while true; do
-            printf "\033c"; reload_config
+            clear; reload_config
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
             echo -e "${CYAN}│     ${WHITE}高级选项 (保活, 密码, 路径)   ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -688,9 +695,9 @@ edit_variables() {
     }
 
     while true; do
-        printf "\033c"
+        clear
         echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-        echo -e "${CYAN}│            ${WHITE}配置参数菜单           ${CYAN}│${RESET}"  # 修复对齐：将 9 个空格调整为 10 个空格
+        echo -e "${CYAN}│            ${WHITE}配置参数菜单           ${CYAN}│${RESET}"
         echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
         
         echo -e "${YELLOW}═══ ${WHITE}配置分类${YELLOW} ════════════════════════${RESET}"
