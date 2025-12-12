@@ -12,7 +12,7 @@ ZIP_FILE="/tmp/$APP_NAME.zip"
 
 SHORTCUT_NAME="nav"
 SHORTCUT_PATH="/usr/local/bin/$SHORTCUT_NAME"
-SCRIPT_URL="https://raw.githubusercontent.com/llodys/node-nav/main/node-nav-argo.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/llodys/node-nav/main/node-nav.sh"
 
 OS_ID=""
 PKG_MANAGER=""
@@ -306,7 +306,7 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-SCRIPT_URL="https://raw.githubusercontent.com/llodys/node-nav/main/node-nav-argo.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/llodys/node-nav/main/node-nav.sh"
 
 echo -e "${CYAN}正在连接服务器获取最新管理脚本 (Systemd)...${RESET}"
 TMP_SCRIPT=$(mktemp)
