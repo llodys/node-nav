@@ -191,7 +191,7 @@ initialize_install_vars() {
         OLD_CONFIG_LOADED=true
         yellow "ℹ️ 检测到旧配置文件，将使用其值作为默认选项。"
         sleep 1
-    fi # <--- 修复点 1：将 } 更改为 fi
+    fi 
     
     get_public_ip
     UUID_DEFAULT="${UUID:-$(generate_uuid)}"
@@ -573,9 +573,9 @@ edit_variables() {
     # 基础设置子菜单
     submenu_basic() {
         while true; do
-            printf "\033c"; reload_config
+            clear; reload_config # <--- 已修改
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-            echo -e "${CYAN}│     ${WHITE}基础设置 (UUID, 端口, 名称)   ${CYAN}│${RESET}"
+            echo -e "${CYAN}│      ${WHITE}基础设置 (UUID, 端口, 名称)    ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}UUID: $(show_var "$UUID")"
@@ -600,9 +600,9 @@ edit_variables() {
     # Argo 隧道设置子菜单
     submenu_argo() {
         while true; do
-            printf "\033c"; reload_config
+            clear; reload_config # <--- 已修改
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-            echo -e "${CYAN}│     ${WHITE}Argo 隧道设置 (域名, 密钥)    ${CYAN}│${RESET}"
+            echo -e "${CYAN}│      ${WHITE}Argo 隧道设置 (域名, 密钥)     ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}固定隧道域名: $(show_var "$ARGO_DOMAIN")"
@@ -628,9 +628,9 @@ edit_variables() {
     # 节点网络设置子菜单
     submenu_network() {
         while true; do
-            printf "\033c"; reload_config
+            clear; reload_config # <--- 已修改
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-            echo -e "${CYAN}│     ${WHITE}节点网络 (优选IP, 路径)       ${CYAN}│${RESET}"
+            echo -e "${CYAN}│      ${WHITE}节点网络 (优选IP, 路径)        ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}优选域名: $(show_var "$CFIP")"
@@ -655,9 +655,9 @@ edit_variables() {
     # 哪吒监控设置子菜单
     submenu_nezha() {
         while true; do
-            printf "\033c"; reload_config
+            clear; reload_config # <--- 已修改
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-            echo -e "${CYAN}│     ${WHITE}哪吒监控 (服务器, 密钥)       ${CYAN}│${RESET}"
+            echo -e "${CYAN}│      ${WHITE}哪吒监控 (服务器, 密钥)        ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}哪吒服务: $(show_var "$NEZHA_SERVER")"
@@ -682,9 +682,9 @@ edit_variables() {
     # 高级选项子菜单
     submenu_advanced() {
         while true; do
-            printf "\033c"; reload_config
+            clear; reload_config # <--- 已修改
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-            echo -e "${CYAN}│     ${WHITE}高级选项 (保活, 密码, 路径)   ${CYAN}│${RESET}"
+            echo -e "${CYAN}│      ${WHITE}高级选项 (保活, 密码, 路径)    ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
             echo -e "${YELLOW}═══ ${WHITE}当前配置${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 1. ${RESET}订阅上传地址: $(show_var "$UPLOAD_URL")"
@@ -704,7 +704,7 @@ edit_variables() {
                 4) read -p "输入新 运行目录: " v; update_config_value "FILE_PATH" "$v" ;;
                 # 修复: 使用 -s 隐藏密码输入
                 5) read -s -p "输入新 管理密码: " v; echo; update_config_value "ADMIN_PASSWORD" "$v" ;;
-                [sS]) if save_and_restart; then return 10; fi ;; # <--- 修复点 6：将 } 更改为 fi
+                [sS]) if save_and_restart; then return 10; fi ;;
                 0) return 0 ;;
                 *) red "无效选项"; sleep 0.5 ;;
             esac
@@ -714,9 +714,9 @@ edit_variables() {
 
     # 配置主菜单
     while true; do
-        printf "\033c"
+        clear # <--- 已修改
         echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-        echo -e "${CYAN}│            ${WHITE}配置参数菜单           ${CYAN}│${RESET}"
+        echo -e "${CYAN}│          ${WHITE}配置参数菜单           ${CYAN}│${RESET}"
         echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
         
         echo -e "${YELLOW}═══ ${WHITE}配置分类${YELLOW} ════════════════════════${RESET}"
