@@ -87,7 +87,6 @@ generate_uuid() {
     head -c 16 /dev/urandom | xxd -p
 }
 
-# 【Node.js LTS 优化】
 check_system() {
     if ! command -v systemctl &>/dev/null; then
         red "错误: 未找到 systemd (systemctl)。"
@@ -137,7 +136,6 @@ check_dependencies() {
     fi
 }
 
-# 【Node.js LTS 优化】
 install_nodejs() {
     if command -v node &>/dev/null; then
         NODE_MAJOR_VERSION=$(node -v | sed 's/v\([0-9]\+\).*/\1/')
@@ -204,7 +202,7 @@ initialize_install_vars() {
     UUID_DEFAULT="${UUID:-$(generate_uuid)}"
 
     if [ -f "$SERVICE_FILE" ]; then
-        yellow "检测到服务已存在，将覆盖安装。"
+        yellow "⚠️ 检测到服务已存在，将覆盖安装。"
     fi
 }
 
@@ -325,29 +323,29 @@ EOFSCRIPT
     chmod +x "$SHORTCUT_PATH"
     
     echo ""
-    bright_green "快捷命令已创建！"
+    bright_green "✅ 快捷命令已创建！"
     echo -e "以后在终端直接输入 ${CYAN}${SHORTCUT_NAME}${RESET} 即可获取最新脚本并打开菜单。"
     echo ""
 }
 
 perform_core_installation() {
-    bright_green "开始安装 (Systemd模式)... 日志: $LOG_FILE"
+    bright_green "🚀 开始安装 (Systemd模式)... 日志: $LOG_FILE"
     [ -f "$SERVICE_FILE" ] && systemctl stop "$APP_NAME" &>/dev/null || true
     install_nodejs
     
-    white "创建专用非Root用户 '$APP_NAME'..."
+    white "👥 创建专用非Root用户 '$APP_NAME'..."
     id -u "$APP_NAME" &>/dev/null || useradd -r -m -s /usr/sbin/nologin "$APP_NAME"
 
-    white "下载项目文件..."
+    white "📦 下载并解压项目文件..."
     curl -L -o "$ZIP_FILE" "$ZIP_URL" >> "$LOG_FILE" 2>&1
     rm -rf "$INSTALL_DIR"; mkdir -p "$INSTALL_DIR"
     unzip -q "$ZIP_FILE" -d "$INSTALL_DIR"; rm -f "$ZIP_FILE"
 
     cd "$INSTALL_DIR"
-    white "安装 npm 依赖..."
+    white "🛠️ 安装 npm 依赖..."
     
     if ! npm install --omit=dev --silent 2>> "$LOG_FILE"; then
-        red "错误: npm install 失败！"
+        red "❌ 错误: npm install 失败！"
         yellow "最近的安装日志片段如下 ($LOG_FILE):"
         tail -n 10 "$LOG_FILE"
         exit 1
@@ -375,11 +373,11 @@ ADMIN_PASSWORD=${ADMIN_PASSWORD}
 NODE_ENV=production
 EOF
 
-    white "设置文件权限为 '$APP_NAME' 用户..."
+    white "🔐 设置文件权限为 '$APP_NAME' 用户..."
     chown -R "$APP_NAME":"$APP_NAME" "$INSTALL_DIR"
     chmod 600 "$CONFIG_FILE_ENV"
 
-    white "创建 systemd 服务..."
+    white "📝 创建 systemd 服务..."
 
     cat > "$SERVICE_FILE" <<EOF
 [Unit]
@@ -413,7 +411,7 @@ EOF
     create_shortcut
 
     yellow "1.服务已安装完成！服务已启动并开机自启"
-    yellow "2.请等待1分钟后,在菜单里使用 4.查看订阅链接"
+    yellow "2. 请等待1分钟后, 在菜单里使用 ${CYAN}4.查看订阅链接${YELLOW}。"
 }
 
 install_service() {
@@ -759,7 +757,7 @@ main() {
         if [ "$SERVICE_INSTALLED" = true ]; then
             echo -e "${GREEN} 2. ${RESET}卸载服务"
             echo -e "${GREEN} 3. ${RESET}重启服务"
-            echo -e "${GREEN} 4. ${RESET}${CYAN}查看订阅链接${RESET}" 
+            echo -e "${GREEN} 4. ${RESET}${YELLOW}查看订阅链接${RESET}" 
             
             # --- 管理功能区 ---
             echo -e "${YELLOW}═══ ${WHITE}服务管理${YELLOW} ════════════════════════${RESET}"
