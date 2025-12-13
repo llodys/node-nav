@@ -40,7 +40,6 @@ white() { echo -e "${WHITE}$1${RESET}"; }
 # --- 功能函数：读取现有配置 ---
 load_existing_config() {
     if [ -f "$CONFIG_FILE_ENV" ]; then
-        # 处理换行符并加载配置
         local TMP_ENV=$(mktemp)
         tr -d '\r' < "$CONFIG_FILE_ENV" > "$TMP_ENV" 
         set -a
@@ -48,7 +47,6 @@ load_existing_config() {
         set +a
         rm -f "$TMP_ENV"
         
-        # 初始化默认变量
         UUID="${UUID:-}"
         PORT="${PORT:-3000}"
         ARGO_DOMAIN="${ARGO_DOMAIN:-}"
@@ -128,7 +126,6 @@ check_system() {
 # --- 依赖管理：安装基础工具 ---
 check_dependencies() {
     white "正在更新软件源并检查/安装依赖..."
-    # 确保安装 bash, curl, unzip, lsof, uuidgen
     apk update >> "$LOG_FILE" 2>&1
     apk add bash curl unzip lsof util-linux uuidgen coreutils >> "$LOG_FILE" 2>&1
     
@@ -301,11 +298,9 @@ create_shortcut() {
     
     mkdir -p /usr/local/bin
 
-    # 备份当前脚本到安装目录
     cp "$0" "$LOCAL_SCRIPT_PATH"
     chmod +x "$LOCAL_SCRIPT_PATH"
 
-    # 创建指向本地文件的 wrapper 脚本
     cat > "$SHORTCUT_PATH" << EOF
 #!/bin/bash
 if [ -f "$LOCAL_SCRIPT_PATH" ]; then
@@ -334,7 +329,6 @@ perform_core_installation() {
     install_nodejs
     
     white "👥 创建专用非Root用户 '$APP_NAME'..."
-    # Alpine 使用 adduser -D 创建系统用户
     id -u "$APP_NAME" &>/dev/null || adduser -D -h "$INSTALL_DIR" -s /sbin/nologin "$APP_NAME"
 
     white "📦 下载并解压项目文件..."
@@ -461,6 +455,7 @@ uninstall_service() {
     fi
     
     bright_green "✅ 服务已卸载，用户和安装目录已删除。"
+    # 修复：卸载后直接退出
     exit 0
 }
 
@@ -472,6 +467,8 @@ restart_service() {
         return 1
     fi
     
+    # 修复：增加提示，防止操作过快无反馈
+    white "⚙️ 正在重启服务，请稍候..."
     if rc-service "$APP_NAME" restart 2>/dev/null; then
         bright_green "✅ 服务已重启"
     else
@@ -488,11 +485,9 @@ view_status() {
     rc-service "$APP_NAME" status
     echo ""
     
-    # 默认显示正常运行日志
     cyan "--- 📝 正常运行日志 (Last 5 lines) ---"
     tail -n 5 "/var/log/${APP_NAME}.log" 2>/dev/null
     
-    # 仅当有错误时显示错误日志
     if [ -s "/var/log/${APP_NAME}.err" ]; then
         echo ""
         red "--- ⚠️ 检测到错误日志 (Last 5 lines) ---"
@@ -521,7 +516,6 @@ edit_variables() {
     
     cp "$CONFIG_FILE_ENV" "$CONFIG_FILE_ENV.bak"
 
-    # 安全更新函数：对特殊字符进行转义处理
     update_config_value() {
         local key=$1
         local val=$2
@@ -579,7 +573,6 @@ edit_variables() {
         return 0
     }
 
-    # --- 子菜单定义 ---
     submenu_basic() {
         while true; do
             clear; reload_config 
@@ -714,7 +707,6 @@ edit_variables() {
         done
     }
 
-    # --- 配置主菜单循环 ---
     while true; do
         clear
         echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
@@ -814,8 +806,8 @@ main() {
             *) red "无效选项" ;;
         esac
         
-        [[ "$num" =~ ^[12346]$ ]] && {
-            read -n 1 -s -r -p "按任意键返回主菜单..."
+        [[ "$num" =~ ^[13456]$ ]] && {
+            read -n 1 -s -r -p "按任意键返回主菜单..." < /dev/tty
             echo ""
         }
     done
