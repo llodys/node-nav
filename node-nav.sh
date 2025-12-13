@@ -1,26 +1,34 @@
 #!/bin/bash
-set -e
 
-APP_NAME="node-nav"
-INSTALL_DIR="/opt/$APP_NAME"
-LOG_FILE="/var/log/${APP_NAME}_install.log"
-CONFIG_FILE_ENV="$INSTALL_DIR/config.env"
-CONFIG_FILE_SUB="$INSTALL_DIR/data/sub.txt"
-SERVICE_FILE="/etc/systemd/system/$APP_NAME.service"
-ZIP_URL="https://github.com/llodys/node-nav/releases/download/node-nav/node-nav.zip"
-ZIP_FILE="/tmp/$APP_NAME.zip"
+# =========================================================
+# 脚本名称：Node-Nav 服务管理脚本 (Systemd 版)
+# 功能说明：一键安装、配置、管理 Node.js 导航及隧道服务
+# 适用系统：Ubuntu, Debian, CentOS, AlmaLinux 等 Systemd 系统
+# =========================================================
 
-SHORTCUT_NAME="nav"
-SHORTCUT_PATH="/usr/local/bin/$SHORTCUT_NAME"
-SCRIPT_URL="https://raw.githubusercontent.com/llodys/node-nav/main/node-nav.sh"
+# --- 全局配置变量 ---
+APP_NAME="node-nav"                                     # 服务名称
+INSTALL_DIR="/opt/$APP_NAME"                            # 安装目录
+LOG_FILE="/var/log/${APP_NAME}_install.log"             # 安装日志路径
+CONFIG_FILE_ENV="$INSTALL_DIR/config.env"               # 环境变量配置文件
+CONFIG_FILE_SUB="$INSTALL_DIR/data/sub.txt"             # 订阅链接文件
+SERVICE_FILE="/etc/systemd/system/$APP_NAME.service"    # Systemd 服务文件路径
+ZIP_URL="https://github.com/llodys/node-nav/releases/download/node-nav/node-nav.zip" # 项目下载地址
+ZIP_FILE="/tmp/$APP_NAME.zip"                           # 临时下载文件路径
+
+SHORTCUT_NAME="nav"                                     # 快捷命令名称
+SHORTCUT_PATH="/usr/local/bin/$SHORTCUT_NAME"           # 快捷命令路径
+LOCAL_SCRIPT_PATH="$INSTALL_DIR/manage.sh"              # 本地脚本备份路径
 
 OS_ID=""
 PKG_MANAGER=""
 NODE_SETUP_URL=""
 
+# --- 终端颜色定义 ---
 RED='\033[1;31m'; GREEN='\033[1;32m'; BRIGHT_GREEN='\033[1;32m'; YELLOW='\033[1;33m'
 BLUE='\033[1;34m'; MAGENTA='\033[1;35m'; CYAN='\033[1;36m'; WHITE='\033[1;37m'; RESET='\033[0m'
 
+# --- 基础输出函数 ---
 red() { echo -e "${RED}$1${RESET}"; }
 green() { echo -e "${GREEN}$1${RESET}"; }
 bright_green() { echo -e "${BRIGHT_GREEN}$1${RESET}"; }
@@ -29,6 +37,7 @@ blue() { echo -e "${BLUE}$1${RESET}"; }
 cyan() { echo -e "${CYAN}$1${RESET}"; }
 white() { echo -e "${WHITE}$1${RESET}"; }
 
+# --- 功能函数：读取现有配置 ---
 load_existing_config() {
     if [ -f "$CONFIG_FILE_ENV" ]; then
         local TMP_ENV=$(mktemp)
@@ -52,6 +61,7 @@ load_existing_config() {
     return 1
 }
 
+# --- 功能函数：自动获取公网IP ---
 get_public_ip() {
     white "正在尝试获取服务器公网 IP (IPv4 & IPv6)..."
     
@@ -72,6 +82,7 @@ get_public_ip() {
     fi
 }
 
+# --- 安全检查：确保 Root 权限 ---
 check_root() {
     if [ "$EUID" -ne 0 ]; then
         red "错误: 此脚本需要 root 权限运行。"
@@ -79,6 +90,7 @@ check_root() {
     fi
 }
 
+# --- 工具函数：生成随机 UUID ---
 generate_uuid() {
     command -v uuidgen &>/dev/null && uuidgen || \
     cat /proc/sys/kernel/random/uuid 2>/dev/null || \
@@ -87,6 +99,7 @@ generate_uuid() {
     head -c 16 /dev/urandom | xxd -p
 }
 
+# --- 环境检查：识别操作系统与包管理器 ---
 check_system() {
     if ! command -v systemctl &>/dev/null; then
         red "错误: 未找到 systemd (systemctl)。"
@@ -103,10 +116,10 @@ check_system() {
 
     case $OS_ID in
         ubuntu|debian)
-            PKG_MANAGER="apt"
+            PKG_MANAGER="apt-get"
             NODE_SETUP_URL="https://deb.nodesource.com/setup_lts.x" 
             ;;
-        centos|rhel|almalinux|rocky)
+        centos|rhel|almalinux|rocky|fedora)
             PKG_MANAGER=$(command -v dnf &>/dev/null && echo "dnf" || echo "yum")
             NODE_SETUP_URL="https://rpm.nodesource.com/setup_lts.x" 
             ;;
@@ -119,23 +132,26 @@ check_system() {
     white "检测到系统: $(green "$OS_ID") | 包管理器: $(green "$PKG_MANAGER")"
 }
 
+# --- 依赖管理：安装必要工具 ---
 check_dependencies() {
-    for cmd in curl unzip; do
+    white "正在检查并安装基础依赖..."
+    
+    if [[ "$OS_ID" =~ ubuntu|debian ]]; then
+        $PKG_MANAGER update -y >> "$LOG_FILE" 2>&1
+        $PKG_MANAGER install -y curl unzip lsof uuid-runtime coreutils >> "$LOG_FILE" 2>&1
+    elif [[ "$OS_ID" =~ centos|rhel|almalinux|rocky ]]; then
+        $PKG_MANAGER install -y curl unzip lsof util-linux coreutils >> "$LOG_FILE" 2>&1
+    fi
+
+    for cmd in curl unzip lsof; do
         if ! command -v "$cmd" &>/dev/null; then
-            red "缺少命令 '$cmd'，请先安装。"
-            yellow "示例: sudo $PKG_MANAGER install -y $cmd"
+            red "错误: 依赖 '$cmd' 安装失败，请检查网络或手动安装。"
             exit 1
         fi
     done
-
-    if [[ "$OS_ID" =~ centos|rhel ]]; then
-        if ! command -v uuidgen &>/dev/null; then
-            yellow "安装 uuidgen..."
-            "$PKG_MANAGER" install -y util-linux >> "$LOG_FILE" 2>&1
-        fi
-    fi
 }
 
+# --- 环境配置：安装 Node.js ---
 install_nodejs() {
     if command -v node &>/dev/null; then
         NODE_MAJOR_VERSION=$(node -v | sed 's/v\([0-9]\+\).*/\1/')
@@ -145,8 +161,8 @@ install_nodejs() {
         white "未检测到 Node.js"
     fi
 
-    if [ "$NODE_MAJOR_VERSION" -lt 24 ]; then 
-        yellow "Node.js 版本低于 v24，正在安装/升级到最新 LTS 版本..."
+    if [ "$NODE_MAJOR_VERSION" -lt 18 ]; then 
+        yellow "Node.js 版本较低或不存在，正在安装/升级到最新 LTS 版本..."
         curl -fsSL "$NODE_SETUP_URL" | bash >> "$LOG_FILE" 2>&1
         "$PKG_MANAGER" install -y nodejs >> "$LOG_FILE" 2>&1
         if command -v node &>/dev/null; then
@@ -158,6 +174,7 @@ install_nodejs() {
     fi
 }
 
+# --- 工具函数：检查端口占用 ---
 check_port() {
     local port=$1
     if lsof -i:"$port" &>/dev/null; then
@@ -167,6 +184,7 @@ check_port() {
     return 0
 }
 
+# --- UI函数：菜单状态栏 ---
 check_status_for_menu() {
     PADDING="    " 
 
@@ -182,10 +200,10 @@ check_status_for_menu() {
     fi
 
     echo -e "${PADDING}${STATUS_TEXT}"
-    
     cyan "---------------------------------"
 }
 
+# --- 流程函数：初始化变量 ---
 initialize_install_vars() {
     PORT=3000
     ARGO_PORT=8001
@@ -211,6 +229,7 @@ initialize_install_vars() {
     fi
 }
 
+# --- 流程函数：用户输入配置 ---
 prompt_user_config() {
     cyan "--- 安装流程 ---"
 
@@ -233,7 +252,6 @@ prompt_user_config() {
     done
 
     read -p "$(yellow "3. 请输入 固定隧道密钥 [$( [ -z "$ARGO_AUTH" ] && echo '必填' || echo '已配置')]: ")" ARGO_AUTH_INPUT
-    
     [ -z "$ARGO_AUTH_INPUT" ] || ARGO_AUTH="$ARGO_AUTH_INPUT"
 
     read -p "$(yellow "4. 请输入 固定隧道域名 [$( [ -z "$ARGO_DOMAIN" ] && echo '必填' || echo "默认: $ARGO_DOMAIN" )]: ")" ARGO_DOMAIN_INPUT
@@ -260,6 +278,7 @@ prompt_user_config() {
     [ -z "$ADMIN_PASSWORD_INPUT" ] || ADMIN_PASSWORD="$ADMIN_PASSWORD_INPUT"
 }
 
+# --- 流程函数：验证与确认 ---
 validate_and_confirm() {
     if [ -z "$ARGO_DOMAIN" ] || [ -z "$ARGO_AUTH" ]; then
         clear
@@ -295,44 +314,33 @@ validate_and_confirm() {
     return 0
 }
 
+# --- 系统配置：创建本地快捷方式 ---
 create_shortcut() {
-    white "正在创建全局快捷命令..."
+    white "⚙️ 正在配置本地快捷命令..."
     
     mkdir -p /usr/local/bin
 
-    cat > "$SHORTCUT_PATH" << 'EOFSCRIPT'
+    cp "$0" "$LOCAL_SCRIPT_PATH"
+    chmod +x "$LOCAL_SCRIPT_PATH"
+
+    cat > "$SHORTCUT_PATH" << EOF
 #!/bin/bash
-RED='\033[1;31m'
-CYAN='\033[1;36m'
-RESET='\033[0m'
-
-if [ "$EUID" -ne 0 ]; then
-    echo -e "${RED}错误: 请以 root 权限运行此命令。${RESET}"
-    exit 1
-fi
-
-SCRIPT_URL="https://raw.githubusercontent.com/llodys/node-nav/main/node-nav.sh"
-
-echo -e "${CYAN}正在连接服务器获取最新管理脚本 (Systemd)...${RESET}"
-TMP_SCRIPT=$(mktemp)
-if curl -sL "$SCRIPT_URL" -o "$TMP_SCRIPT"; then
-    bash "$TMP_SCRIPT"
-    rm -f "$TMP_SCRIPT"
+if [ -f "$LOCAL_SCRIPT_PATH" ]; then
+    bash "$LOCAL_SCRIPT_PATH" "\$@"
 else
-    echo -e "${RED}获取脚本失败，请检查网络连接。${RESET}"
-    rm -f "$TMP_SCRIPT"
-    exit 1
+    echo "错误: 管理脚本 $LOCAL_SCRIPT_PATH 不存在。"
 fi
-EOFSCRIPT
+EOF
 
     chmod +x "$SHORTCUT_PATH"
     
     echo ""
-    bright_green "✅ 快捷命令已创建！"
-    echo -e "以后在终端直接输入 ${CYAN}${SHORTCUT_NAME}${RESET} 即可获取最新脚本并打开菜单。"
+    bright_green "✅ 快捷命令已更新！"
+    echo -e "以后在终端直接输入 ${CYAN}${SHORTCUT_NAME}${RESET} 即可打开菜单 (无需联网)。"
     echo ""
 }
 
+# --- 核心任务：执行安装与服务配置 ---
 perform_core_installation() {
     bright_green "🚀 开始安装 (Systemd模式)... 日志: $LOG_FILE"
     [ -f "$SERVICE_FILE" ] && systemctl stop "$APP_NAME" &>/dev/null || true
@@ -383,6 +391,7 @@ EOF
     chmod 600 "$CONFIG_FILE_ENV"
 
     white "📝 创建 systemd 服务..."
+    NODE_BIN=$(command -v node)
 
     cat > "$SERVICE_FILE" <<EOF
 [Unit]
@@ -393,7 +402,7 @@ Type=simple
 User=$APP_NAME
 Group=$APP_NAME
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/env node $INSTALL_DIR/app.js
+ExecStart=$NODE_BIN $INSTALL_DIR/app.js
 Restart=always
 EnvironmentFile=$CONFIG_FILE_ENV
 PrivateTmp=true
@@ -419,6 +428,7 @@ EOF
     yellow "2. 请等待1分钟后, 在菜单里使用 ${CYAN}4.查看订阅链接${YELLOW}。"
 }
 
+# --- 菜单功能：1. 安装服务 ---
 install_service() {
     check_root
     mkdir -p "$(dirname "$LOG_FILE")"
@@ -430,6 +440,7 @@ install_service() {
     perform_core_installation
 }
 
+# --- 菜单功能：2. 卸载服务 ---
 uninstall_service() {
     check_root
     read -p "$(yellow "确定删除 '$APP_NAME' 及所有文件? (y/n): ")" confirm
@@ -455,10 +466,11 @@ uninstall_service() {
         white "清理旧版快捷命令: /usr/bin/$SHORTCUT_NAME"
     fi
 
-    bright_green "服务已卸载，用户和安装目录已删除。"
+    bright_green "✅ 服务已卸载，用户和安装目录已删除。"
     exit 0
 }
 
+# --- 菜单功能：3. 重启服务 ---
 restart_service() {
     check_root
     if [ ! -f "$SERVICE_FILE" ]; then
@@ -466,37 +478,59 @@ restart_service() {
         return 1
     fi
     
+    white "⚙️ 正在重启服务，请稍候..."
     if systemctl restart "$APP_NAME" 2>/dev/null; then
-        bright_green "服务已重启"
+        bright_green "✅ 服务已重启"
     else
-        red "重启失败，请查看状态 (选项 6) 获取更多信息。"
+        red "❌ 重启失败，请查看状态 (选项 6) 获取更多信息。"
     fi
 }
 
+# --- 菜单功能：6. 查看状态 ---
 view_status() {
     if [ ! -f "$SERVICE_FILE" ]; then
         red "错误: 服务文件 $SERVICE_FILE 不存在，请先执行安装 (选项 1)。"
         return 1
     fi
+    clear
+    cyan "--- ${APP_NAME} 服务状态 ---"
     systemctl --no-pager status "$APP_NAME"
     echo ""
-    yellow "--- 错误日志末尾 ($APP_NAME.err) ---"
-    tail -n 10 "/var/log/${APP_NAME}.err" 2>/dev/null
+    
+    cyan "--- 📝 正常运行日志 ---"
+    tail -n 5 "/var/log/${APP_NAME}.log" 2>/dev/null
+    
+    if [ -s "/var/log/${APP_NAME}.err" ]; then
+        echo ""
+        red "--- ⚠️ 检测到错误日志 (Last 5 lines) ---"
+        tail -n 5 "/var/log/${APP_NAME}.err" 2>/dev/null
+    fi
+    
+    echo ""
+    read -n 1 -s -r -p "按任意键返回主菜单..."
+    echo ""
 }
 
+# --- 菜单功能：4. 查看订阅 ---
 view_subscription() {
     if [ ! -f "$SERVICE_FILE" ]; then red "服务未安装"; sleep 2; return; fi
     if [ -f "$CONFIG_FILE_SUB" ] && [ -s "$CONFIG_FILE_SUB" ]; then
-        cyan "\n--- 订阅链接 ---"
+        clear
+        cyan "\n--- 🔗 订阅链接 ---"
         cat "$CONFIG_FILE_SUB"
         echo
         cyan "----------------"
+        read -n 1 -s -r -p "按任意键返回主菜单..."
+        echo ""
     else
-        red "订阅文件不存在或为空"
+        red "❌ 订阅文件不存在或为空"
         yellow "请确保服务运行并等待1-2分钟后重试"
+        read -n 1 -s -r -p "按任意键返回主菜单..."
+        echo ""
     fi
 }
 
+# --- 菜单功能：5. 修改配置 ---
 edit_variables() {
     check_root
     [ ! -f "$CONFIG_FILE_ENV" ] && red "配置文件不存在，请先安装服务" && sleep 2 && return
@@ -506,8 +540,13 @@ edit_variables() {
     update_config_value() {
         local key=$1
         local val=$2
-        local SAFE_NEW_VALUE=$(echo "$val" | sed 's/[\/&]/\\&/g')
-        sed -i "s|^$key=.*|$key=$SAFE_NEW_VALUE|#" "$CONFIG_FILE_ENV"
+        local ESCAPED_VAL=$(echo "$val" | sed 's/\\/\\\\/g' | sed 's/#/\\#/g' | sed 's/&/\\&/g')
+        
+        if grep -q "^$key=" "$CONFIG_FILE_ENV"; then
+            sed -i "s|^$key=.*|$key=$ESCAPED_VAL|#" "$CONFIG_FILE_ENV"
+        else
+            echo "$key=$val" >> "$CONFIG_FILE_ENV"
+        fi
     }
 
     show_var() {
@@ -533,7 +572,7 @@ edit_variables() {
             return 1
         fi
         rm "$CONFIG_FILE_ENV.bak"
-        bright_green "配置已保存，正在重启服务..."
+        bright_green "✅ 配置已保存，正在重启服务..."
         restart_service
         sleep 1
         return 0
@@ -555,7 +594,6 @@ edit_variables() {
         return 0
     }
 
-    # 已修复: 将 printf "\033c" 替换为 clear
     submenu_basic() {
         while true; do
             clear; reload_config
@@ -582,7 +620,6 @@ edit_variables() {
         done
     }
 
-    # 已修复: 将 printf "\033c" 替换为 clear
     submenu_argo() {
         while true; do
             clear; reload_config
@@ -609,7 +646,6 @@ edit_variables() {
         done
     }
 
-    # 已修复: 将 printf "\033c" 替换为 clear
     submenu_network() {
         while true; do
             clear; reload_config
@@ -636,7 +672,6 @@ edit_variables() {
         done
     }
 
-    # 已修复: 将 printf "\033c" 替换为 clear
     submenu_nezha() {
         while true; do
             clear; reload_config
@@ -663,7 +698,6 @@ edit_variables() {
         done
     }
 
-    # 已修复: 将 printf "\033c" 替换为 clear
     submenu_advanced() {
         while true; do
             clear; reload_config
@@ -694,6 +728,7 @@ edit_variables() {
         done
     }
 
+    # --- 配置主菜单循环 ---
     while true; do
         clear
         echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
@@ -719,7 +754,11 @@ edit_variables() {
             4) submenu_nezha; [ $? -eq 10 ] && break ;;
             5) submenu_advanced; [ $? -eq 10 ] && break ;;
             0) 
-                mv "$CONFIG_FILE_ENV.bak" "$CONFIG_FILE_ENV"
+                if [ -f "$CONFIG_FILE_ENV.bak" ]; then
+                    mv "$CONFIG_FILE_ENV.bak" "$CONFIG_FILE_ENV"
+                    yellow "未保存配置，已恢复原文件。"
+                    sleep 1
+                fi
                 break
                 ;;
             *) 
@@ -730,6 +769,7 @@ edit_variables() {
     done
 }
 
+# --- 程序主入口 ---
 main() {
     clear
     check_root
@@ -739,12 +779,10 @@ main() {
     while true; do
         clear
         
-        # --- 菜单头部优化 ---
         echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-        echo -e "${CYAN}│     ${WHITE}node-nav 服务管理脚本 v1.0    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│     ${WHITE}node-nav 服务管理脚本 v1.1    ${CYAN}│${RESET}"
         echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
         
-        # --- 状态栏优化 ---
         check_status_for_menu 
         
         SERVICE_INSTALLED=false
@@ -757,7 +795,6 @@ main() {
             READ_PROMPT="请输入选项 [0-1]: "
         fi
 
-        # --- 核心功能区 ---
         echo -e "${YELLOW}═══ ${WHITE}核心功能${YELLOW} ════════════════════════${RESET}"
         echo -e "${GREEN} 1. ${RESET}${install_option_text}"
 
@@ -766,7 +803,6 @@ main() {
             echo -e "${GREEN} 3. ${RESET}重启服务"
             echo -e "${GREEN} 4. ${RESET}${YELLOW}查看订阅链接${RESET}" 
             
-            # --- 管理功能区 ---
             echo -e "${YELLOW}═══ ${WHITE}服务管理${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 5. ${RESET}修改配置"
             echo -e "${GREEN} 6. ${RESET}查看服务状态"
@@ -793,10 +829,13 @@ main() {
             5) edit_variables ;;
             6) view_status ;;
             0) exit 0 ;;
-            *) red "无效选项" ;;
+            *) red "无效选项" 
+               read -n 1 -s -r -p "按任意键返回主菜单..."
+               echo ""
+            ;;
         esac
         
-        [[ "$num" =~ ^[1234]$ ]] && {
+        [[ "$num" =~ ^[12346]$ ]] && {
             read -n 1 -s -r -p "按任意键返回主菜单..."
             echo ""
         }
