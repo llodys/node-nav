@@ -1,27 +1,34 @@
 #!/bin/bash
-set -e
 
-APP_NAME="node-nav"
-INSTALL_DIR="/opt/$APP_NAME"
-LOG_FILE="/var/log/${APP_NAME}_install.log"
-CONFIG_FILE_ENV="$INSTALL_DIR/config.env"
-CONFIG_FILE_SUB="$INSTALL_DIR/data/sub.txt"
-SERVICE_FILE="/etc/init.d/$APP_NAME" 
-ZIP_URL="https://github.com/llodys/node-nav/releases/download/node-nav/node-nav.zip"
-ZIP_FILE="/tmp/$APP_NAME.zip"
+# =========================================================
+# 脚本名称：Node-Nav 服务管理脚本 (Alpine/OpenRC 版)
+# 功能说明：一键安装、配置、管理 Node.js 导航及隧道服务
+# 适用系统：Alpine Linux (基于 OpenRC 初始化系统)
+# =========================================================
 
-SHORTCUT_NAME="nav"
-SHORTCUT_PATH="/usr/local/bin/$SHORTCUT_NAME"
-SCRIPT_URL="https://raw.githubusercontent.com/llodys/node-nav/main/node-nav-alpine.sh" 
+# --- 全局配置变量 ---
+APP_NAME="node-nav"                                     # 服务名称
+INSTALL_DIR="/opt/$APP_NAME"                            # 安装目录
+LOG_FILE="/var/log/${APP_NAME}_install.log"             # 安装日志路径
+CONFIG_FILE_ENV="$INSTALL_DIR/config.env"               # 环境变量配置文件
+CONFIG_FILE_SUB="$INSTALL_DIR/data/sub.txt"             # 订阅链接文件
+SERVICE_FILE="/etc/init.d/$APP_NAME"                    # OpenRC 服务脚本路径
+ZIP_URL="https://github.com/llodys/node-nav/releases/download/node-nav/node-nav.zip" # 项目下载地址
+ZIP_FILE="/tmp/$APP_NAME.zip"                           # 临时下载文件路径
+
+SHORTCUT_NAME="nav"                                     # 快捷命令名称
+SHORTCUT_PATH="/usr/local/bin/$SHORTCUT_NAME"           # 快捷命令路径
+LOCAL_SCRIPT_PATH="$INSTALL_DIR/manage.sh"              # 本地脚本备份路径
 
 OS_ID=""
 PKG_MANAGER="apk"
 
+# --- 终端颜色定义 ---
 RED='\033[1;31m'; GREEN='\033[1;32m'; BRIGHT_GREEN='\033[1;32m'; YELLOW='\033[1;33m'
 BLUE='\033[1;34m'; MAGENTA='\033[1;35m'; CYAN='\033[1;36m'; WHITE='\033[1;37m'; RESET='\033[0m'
 BOLD='\033[1m'
 
-# 颜色函数
+# --- 基础输出函数 ---
 red() { echo -e "${RED}$1${RESET}"; }
 green() { echo -e "${GREEN}$1${RESET}"; }
 bright_green() { echo -e "${BRIGHT_GREEN}$1${RESET}"; }
@@ -30,9 +37,10 @@ blue() { echo -e "${BLUE}$1${RESET}"; }
 cyan() { echo -e "${CYAN}$1${RESET}"; }
 white() { echo -e "${WHITE}$1${RESET}"; }
 
-# 加载现有配置
+# --- 功能函数：读取现有配置 ---
 load_existing_config() {
     if [ -f "$CONFIG_FILE_ENV" ]; then
+        # 处理换行符并加载配置
         local TMP_ENV=$(mktemp)
         tr -d '\r' < "$CONFIG_FILE_ENV" > "$TMP_ENV" 
         set -a
@@ -40,6 +48,7 @@ load_existing_config() {
         set +a
         rm -f "$TMP_ENV"
         
+        # 初始化默认变量
         UUID="${UUID:-}"
         PORT="${PORT:-3000}"
         ARGO_DOMAIN="${ARGO_DOMAIN:-}"
@@ -54,7 +63,7 @@ load_existing_config() {
     return 1
 }
 
-# 获取公网 IP
+# --- 功能函数：自动获取公网IP ---
 get_public_ip() {
     white "正在尝试获取服务器公网 IP (IPv4 & IPv6)..."
     if ! command -v curl &>/dev/null; then return; fi
@@ -76,7 +85,7 @@ get_public_ip() {
     fi
 }
 
-# 检查 Root 权限
+# --- 安全检查：确保 Root 权限 ---
 check_root() {
     if [ "$(id -u)" -ne 0 ]; then
         red "错误: 此脚本需要 root 权限运行。"
@@ -84,7 +93,7 @@ check_root() {
     fi
 }
 
-# 生成 UUID
+# --- 工具函数：生成随机 UUID ---
 generate_uuid() {
     command -v uuidgen &>/dev/null && uuidgen || \
     cat /proc/sys/kernel/random/uuid 2>/dev/null || \
@@ -92,7 +101,7 @@ generate_uuid() {
     head -c 16 /dev/urandom | xxd -p
 }
 
-# 检查系统
+# --- 环境检查：识别 Alpine 系统 ---
 check_system() {
     if [ -f /etc/os-release ]; then
         source /etc/os-release
@@ -116,12 +125,12 @@ check_system() {
     fi
 }
 
-# 检查和安装依赖 (使用 apk)
+# --- 依赖管理：安装基础工具 ---
 check_dependencies() {
-    white "正在更新软件源并检查/安装依赖 (curl, unzip, lsof, uuidgen, bash)..."
+    white "正在更新软件源并检查/安装依赖..."
+    # 确保安装 bash, curl, unzip, lsof, uuidgen
     apk update >> "$LOG_FILE" 2>&1
-    # 确保安装 bash, curl, unzip, lsof, uuidgen (util-linux), coreutils (用于 mktemp)
-    apk add bash curl unzip lsof util-linux coreutils >> "$LOG_FILE" 2>&1
+    apk add bash curl unzip lsof util-linux uuidgen coreutils >> "$LOG_FILE" 2>&1
     
     for cmd in curl unzip lsof uuidgen; do
         if ! command -v "$cmd" &>/dev/null; then
@@ -131,7 +140,7 @@ check_dependencies() {
     done
 }
 
-# 安装 Node.js
+# --- 环境配置：安装 Node.js ---
 install_nodejs() {
     if command -v node &>/dev/null; then
         white "检测 Node.js 版本: $(node -v)"
@@ -147,7 +156,7 @@ install_nodejs() {
     fi
 }
 
-# 检查端口占用
+# --- 工具函数：检查端口占用 ---
 check_port() {
     local port=$1
     if lsof -i:"$port" &>/dev/null; then
@@ -157,7 +166,7 @@ check_port() {
     return 0
 }
 
-# 菜单状态显示
+# --- UI函数：菜单状态栏 ---
 check_status_for_menu() {
     PADDING="    " 
     local STATUS_TEXT=""
@@ -175,7 +184,7 @@ check_status_for_menu() {
     cyan "--------------------------------------"
 }
 
-# 初始化安装变量
+# --- 流程函数：初始化变量 ---
 initialize_install_vars() {
     PORT=3000
     ARGO_PORT=8001
@@ -201,7 +210,7 @@ initialize_install_vars() {
     fi
 }
 
-# 提示用户配置
+# --- 流程函数：用户输入配置 ---
 prompt_user_config() {
     cyan "--- 安装流程 ---"
 
@@ -224,7 +233,6 @@ prompt_user_config() {
     done
 
     read -p "$(yellow "3. 请输入 固定隧道密钥 [$( [ -z "$ARGO_AUTH" ] && echo '必填' || echo '已配置')]: ")" ARGO_AUTH_INPUT
-    
     [ -z "$ARGO_AUTH_INPUT" ] || ARGO_AUTH="$ARGO_AUTH_INPUT"
 
     read -p "$(yellow "4. 请输入 固定隧道域名 [$( [ -z "$ARGO_DOMAIN" ] && echo '必填' || echo "默认: $ARGO_DOMAIN" )]: ")" ARGO_DOMAIN_INPUT
@@ -251,6 +259,7 @@ prompt_user_config() {
     [ -z "$ADMIN_PASSWORD_INPUT" ] || ADMIN_PASSWORD="$ADMIN_PASSWORD_INPUT"
 }
 
+# --- 流程函数：验证与确认 ---
 validate_and_confirm() {
     if [ -z "$ARGO_DOMAIN" ] || [ -z "$ARGO_AUTH" ]; then
         clear
@@ -269,7 +278,6 @@ validate_and_confirm() {
     clear
     cyan "--- 请确认配置 ---"
     
-    # 统一对齐
     echo -e "UUID: $(green "$UUID")" $( [ "$UUID_GENERATED" = true ] && bright_green " (已自动生成)" || true )
     echo -e "HTTP端口: $(green "$PORT")"
     echo -e "隧道密钥: $(green "$ARGO_AUTH")"$( [ "$OLD_CONFIG_LOADED" = true ] && yellow " (旧值)" || true )
@@ -287,46 +295,35 @@ validate_and_confirm() {
     return 0
 }
 
-# 创建全局快捷方式
+# --- 系统配置：创建本地快捷方式 ---
 create_shortcut() {
-    white "⚙️ 正在创建全局快捷命令..."
+    white "⚙️ 正在配置本地快捷命令..."
     
     mkdir -p /usr/local/bin
 
-    cat > "$SHORTCUT_PATH" << 'EOFSCRIPT'
+    # 备份当前脚本到安装目录
+    cp "$0" "$LOCAL_SCRIPT_PATH"
+    chmod +x "$LOCAL_SCRIPT_PATH"
+
+    # 创建指向本地文件的 wrapper 脚本
+    cat > "$SHORTCUT_PATH" << EOF
 #!/bin/bash
-RED='\033[1;31m'
-CYAN='\033[1;36m'
-RESET='\033[0m'
-
-if [ "$(id -u)" -ne 0 ]; then
-    echo -e "${RED}错误: 请以 root 权限运行此命令。${RESET}"
-    exit 1
-fi
-
-SCRIPT_URL="https://raw.githubusercontent.com/llodys/node-nav/main/node-nav-alpine.sh"
-
-echo -e "${CYAN}正在连接服务器获取最新管理脚本 (Alpine)...${RESET}"
-TMP_SCRIPT=$(mktemp)
-if curl -sL "$SCRIPT_URL" -o "$TMP_SCRIPT"; then
-    bash "$TMP_SCRIPT"
-    rm -f "$TMP_SCRIPT"
+if [ -f "$LOCAL_SCRIPT_PATH" ]; then
+    bash "$LOCAL_SCRIPT_PATH" "\$@"
 else
-    echo -e "${RED}获取脚本失败，请检查网络连接。${RESET}"
-    rm -f "$TMP_SCRIPT"
-    exit 1
+    echo "错误: 管理脚本 $LOCAL_SCRIPT_PATH 不存在。"
 fi
-EOFSCRIPT
+EOF
 
     chmod +x "$SHORTCUT_PATH"
     
     echo ""
-    bright_green "✅ 快捷命令已创建！"
-    echo -e "以后在终端直接输入 ${CYAN}${BOLD}${SHORTCUT_NAME}${RESET} 即可获取最新脚本并打开菜单。"
+    bright_green "✅ 快捷命令已更新！"
+    echo -e "以后在终端直接输入 ${CYAN}${BOLD}${SHORTCUT_NAME}${RESET} 即可打开此菜单 (无需联网)。"
     echo ""
 }
 
-# 执行核心安装
+# --- 核心任务：执行安装与服务配置 ---
 perform_core_installation() {
     bright_green "🚀 开始安装 (Alpine/OpenRC)... 日志: $LOG_FILE"
     
@@ -348,7 +345,6 @@ perform_core_installation() {
     cd "$INSTALL_DIR"
     white "🛠️ 安装 npm 依赖..."
     
-    # 关键优化点：使用 --omit=dev 确保只安装生产环境依赖
     if ! npm install --omit=dev --silent 2>> "$LOG_FILE"; then
         red "❌ 错误: npm install 失败！"
         yellow "最近的安装日志片段如下 ($LOG_FILE):"
@@ -383,14 +379,15 @@ EOF
     chmod 600 "$CONFIG_FILE_ENV"
 
     white "📝 创建 OpenRC 服务脚本..."
-    # OpenRC init.d 脚本
+    NODE_BIN=$(command -v node)
+    
     cat > "$SERVICE_FILE" <<EOF
 #!/sbin/openrc-run
 
 name="$APP_NAME"
 description="Nodejs Argo Service"
-command="/usr/bin/env"
-command_args="node $INSTALL_DIR/app.js"
+command="$NODE_BIN"
+command_args="$INSTALL_DIR/app.js"
 command_background=true
 pidfile="/run/${APP_NAME}.pid"
 directory="$INSTALL_DIR"
@@ -404,13 +401,11 @@ depend() {
 }
 
 start_pre() {
-    # 加载配置 (包括 NODE_ENV=production)
     if [ -f "$CONFIG_FILE_ENV" ]; then
         set -a
         source "$CONFIG_FILE_ENV"
         set +a
     fi
-    # 确保日志文件存在并设置权限
     checkpath -f -o \$command_user /var/log/${APP_NAME}.log
     checkpath -f -o \$command_user /var/log/${APP_NAME}.err
 }
@@ -428,7 +423,7 @@ EOF
     yellow "2. 请等待1分钟后, 在菜单里使用 ${CYAN}4.查看订阅链接${YELLOW}。"
 }
 
-# 安装服务
+# --- 菜单功能：1. 安装服务 ---
 install_service() {
     check_root
     mkdir -p "$(dirname "$LOG_FILE")"
@@ -440,7 +435,7 @@ install_service() {
     perform_core_installation
 }
 
-# 卸载服务
+# --- 菜单功能：2. 卸载服务 ---
 uninstall_service() {
     check_root
     read -p "$(yellow "确定删除 '$APP_NAME' 及所有文件? (y/n): ")" confirm
@@ -469,7 +464,7 @@ uninstall_service() {
     exit 0
 }
 
-# 重启服务
+# --- 菜单功能：3. 重启服务 ---
 restart_service() {
     check_root
     if [ ! -f "$SERVICE_FILE" ]; then
@@ -484,7 +479,7 @@ restart_service() {
     fi
 }
 
-# 查看服务状态
+# --- 菜单功能：6. 查看状态 ---
 view_status() {
     if [ ! -f "$SERVICE_FILE" ]; then
         red "❌ 错误: 服务文件不存在，请先执行安装 (选项 1)。"
@@ -492,11 +487,20 @@ view_status() {
     fi
     rc-service "$APP_NAME" status
     echo ""
-    yellow "--- 错误日志末尾 ($APP_NAME.err) ---"
-    tail -n 10 "/var/log/${APP_NAME}.err" 2>/dev/null
+    
+    # 默认显示正常运行日志
+    cyan "--- 📝 正常运行日志 (Last 5 lines) ---"
+    tail -n 5 "/var/log/${APP_NAME}.log" 2>/dev/null
+    
+    # 仅当有错误时显示错误日志
+    if [ -s "/var/log/${APP_NAME}.err" ]; then
+        echo ""
+        red "--- ⚠️ 检测到错误日志 (Last 5 lines) ---"
+        tail -n 5 "/var/log/${APP_NAME}.err" 2>/dev/null
+    fi
 }
 
-# 查看订阅链接
+# --- 菜单功能：4. 查看订阅 ---
 view_subscription() {
     if [ ! -f "$SERVICE_FILE" ]; then red "服务未安装"; sleep 2; return; fi
     if [ -f "$CONFIG_FILE_SUB" ] && [ -s "$CONFIG_FILE_SUB" ]; then
@@ -510,19 +514,24 @@ view_subscription() {
     fi
 }
 
-# 编辑配置变量
+# --- 菜单功能：5. 修改配置 ---
 edit_variables() {
     check_root
     [ ! -f "$CONFIG_FILE_ENV" ] && red "配置文件不存在，请先安装服务" && sleep 2 && return
     
     cp "$CONFIG_FILE_ENV" "$CONFIG_FILE_ENV.bak"
 
+    # 安全更新函数：对特殊字符进行转义处理
     update_config_value() {
         local key=$1
         local val=$2
-        # 使用安全的 sed 替换
-        local SAFE_NEW_VALUE=$(echo "$val" | sed 's/[\/&]/\\&/g') 
-        sed -i "s|^$key=.*|$key=$SAFE_NEW_VALUE|#" "$CONFIG_FILE_ENV"
+        local ESCAPED_VAL=$(echo "$val" | sed 's/\\/\\\\/g' | sed 's/#/\\#/g' | sed 's/&/\\&/g')
+        
+        if grep -q "^$key=" "$CONFIG_FILE_ENV"; then
+            sed -i "s|^$key=.*|$key=$ESCAPED_VAL|#" "$CONFIG_FILE_ENV"
+        else
+            echo "$key=$val" >> "$CONFIG_FILE_ENV"
+        fi
     }
 
     show_var() {
@@ -570,10 +579,10 @@ edit_variables() {
         return 0
     }
 
-    # 基础设置子菜单
+    # --- 子菜单定义 ---
     submenu_basic() {
         while true; do
-            clear; reload_config # <--- 已修改
+            clear; reload_config 
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
             echo -e "${CYAN}│     ${WHITE}基础设置 (UUID, 端口, 名称)   ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -597,10 +606,9 @@ edit_variables() {
         done
     }
 
-    # Argo 隧道设置子菜单
     submenu_argo() {
         while true; do
-            clear; reload_config # <--- 已修改
+            clear; reload_config 
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
             echo -e "${CYAN}│     ${WHITE}Argo 隧道设置 (域名, 密钥)    ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -624,11 +632,9 @@ edit_variables() {
         done
     }
 
-
-    # 节点网络设置子菜单
     submenu_network() {
         while true; do
-            clear; reload_config # <--- 已修改
+            clear; reload_config
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
             echo -e "${CYAN}│     ${WHITE}节点网络 (优选IP, 路径)       ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -652,10 +658,9 @@ edit_variables() {
         done
     }
 
-    # 哪吒监控设置子菜单
     submenu_nezha() {
         while true; do
-            clear; reload_config # <--- 已修改
+            clear; reload_config
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
             echo -e "${CYAN}│     ${WHITE}哪吒监控 (服务器, 密钥)       ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -679,10 +684,9 @@ edit_variables() {
         done
     }
 
-    # 高级选项子菜单
     submenu_advanced() {
         while true; do
-            clear; reload_config # <--- 已修改
+            clear; reload_config
             echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
             echo -e "${CYAN}│     ${WHITE}高级选项 (保活, 密码, 路径)   ${CYAN}│${RESET}"
             echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -702,7 +706,6 @@ edit_variables() {
                 2) read -p "输入新 项目域名: " v; update_config_value "PROJECT_URL" "$v" ;;
                 3) read -p "是否开启保活 (true/false): " v; update_config_value "AUTO_ACCESS" "$v" ;;
                 4) read -p "输入新 运行目录: " v; update_config_value "FILE_PATH" "$v" ;;
-                # 修复: 使用 -s 隐藏密码输入
                 5) read -s -p "输入新 管理密码: " v; echo; update_config_value "ADMIN_PASSWORD" "$v" ;;
                 [sS]) if save_and_restart; then return 10; fi ;;
                 0) return 0 ;;
@@ -711,10 +714,9 @@ edit_variables() {
         done
     }
 
-
-    # 配置主菜单
+    # --- 配置主菜单循环 ---
     while true; do
-        clear # <--- 已修改
+        clear
         echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
         echo -e "${CYAN}│            ${WHITE}配置参数菜单           ${CYAN}│${RESET}"
         echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
@@ -738,7 +740,7 @@ edit_variables() {
             4) submenu_nezha; [ $? -eq 10 ] && break ;;
             5) submenu_advanced; [ $? -eq 10 ] && break ;;
             0) 
-                mv "$CONFIG_FILE_ENV.bak" "$CONFIG_FILE_ENV"
+                rm -f "$CONFIG_FILE_ENV.bak"
                 break
                 ;;
             *) 
@@ -749,7 +751,7 @@ edit_variables() {
     done
 }
 
-# 主函数
+# --- 程序主入口 ---
 main() {
     clear
     check_root
@@ -759,12 +761,10 @@ main() {
     while true; do
         clear
         
-        # --- 菜单头部优化 ---
         echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
         echo -e "${CYAN}│   ${WHITE}node-nav 服务管理脚本 (Alpine)  ${CYAN}│${RESET}"
         echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
         
-        # --- 状态栏优化 ---
         check_status_for_menu 
         
         SERVICE_INSTALLED=false
@@ -777,7 +777,6 @@ main() {
             READ_PROMPT="请输入选项 [0-1]: "
         fi
 
-        # --- 核心功能区 ---
         echo -e "${YELLOW}═══ ${WHITE}核心功能${YELLOW} ════════════════════════${RESET}"
         echo -e "${GREEN} 1. ${RESET}${install_option_text}"
 
@@ -786,7 +785,6 @@ main() {
             echo -e "${GREEN} 3. ${RESET}重启服务"
             echo -e "${GREEN} 4. ${RESET}${YELLOW}查看订阅链接${RESET}" 
             
-            # --- 管理功能区 ---
             echo -e "${YELLOW}═══ ${WHITE}服务管理${YELLOW} ════════════════════════${RESET}"
             echo -e "${GREEN} 5. ${RESET}修改配置"
             echo -e "${GREEN} 6. ${RESET}查看服务状态"
