@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =========================================================
-# 脚本名称：Node-Nav 服务管理脚本 (Systemd 版)
+# 脚本名称：Node-Nav 服务管理脚本 (Systemd)
 # 功能说明：一键安装、配置、管理 Node.js 导航及隧道服务
 # 适用系统：Ubuntu, Debian, CentOS, AlmaLinux 等 Systemd 系统
 # =========================================================
@@ -200,7 +200,7 @@ check_status_for_menu() {
     fi
 
     echo -e "${PADDING}${STATUS_TEXT}"
-    cyan "---------------------------------"
+    echo -e "${CYAN}---------------------------------${RESET}"
 }
 
 # --- 流程函数：初始化变量 ---
@@ -307,7 +307,7 @@ validate_and_confirm() {
     echo -e "节点名称前缀: $(green "$NAME")"
     echo -e "书签密码: $(green "$ADMIN_PASSWORD")"
     
-    cyan "---------------------------------"
+    echo -e "${CYAN}---------------------------------${RESET}"
     read -p "$(yellow "确认开始安装? (y/n): ")" confirm
     [[ ! "$confirm" =~ [yY] ]] && yellow "安装已取消" && return 1
     
@@ -445,6 +445,7 @@ uninstall_service() {
     check_root
     read -p "$(yellow "确定删除 '$APP_NAME' 及所有文件? (y/n): ")" confirm
     [[ ! "$confirm" =~ [yY] ]] && cyan "卸载已取消" && return
+    
     systemctl stop "$APP_NAME" &>/dev/null || true
     systemctl disable "$APP_NAME" &>/dev/null || true
     rm -f "$SERVICE_FILE"
@@ -467,6 +468,7 @@ uninstall_service() {
     fi
 
     bright_green "✅ 服务已卸载，用户和安装目录已删除。"
+    # 修复：卸载后直接退出，防止由于管道执行导致的 printf 报错
     exit 0
 }
 
@@ -497,7 +499,7 @@ view_status() {
     systemctl --no-pager status "$APP_NAME"
     echo ""
     
-    cyan "--- 📝 正常运行日志 ---"
+    cyan "--- 📝 最新运行日志 (Last 5 lines) ---"
     tail -n 5 "/var/log/${APP_NAME}.log" 2>/dev/null
     
     if [ -s "/var/log/${APP_NAME}.err" ]; then
@@ -780,7 +782,7 @@ main() {
         clear
         
         echo -e "${CYAN}╭───────────────────────────────────╮${RESET}"
-        echo -e "${CYAN}│     ${WHITE}node-nav 服务管理脚本 v1.1    ${CYAN}│${RESET}"
+        echo -e "${CYAN}│     ${WHITE}node-nav 服务管理脚本 v1.2    ${CYAN}│${RESET}"
         echo -e "${CYAN}╰───────────────────────────────────╯${RESET}"
         
         check_status_for_menu 
@@ -835,8 +837,8 @@ main() {
             ;;
         esac
         
-        [[ "$num" =~ ^[12346]$ ]] && {
-            read -n 1 -s -r -p "按任意键返回主菜单..."
+        [[ "$num" =~ ^[13456]$ ]] && {
+            read -n 1 -s -r -p "按任意键返回主菜单..." < /dev/tty
             echo ""
         }
     done
