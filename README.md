@@ -40,8 +40,8 @@
 | `ARGO_AUTH` | 空 | `修改` | Argo Tunnel 密钥 |
 | `ARGO_PORT` | `8001` | `否` | Argo 监听端口 |
 | `CFIP` | `cdns.doon.eu.org` | 否 | Cloudflare 优选 IP |
-| `SUB_PATH` | `sub` | `修改` | 节点订阅路径 |
-| `NAME` | `node` | `修改` | 节点名称前缀 |
+| `SUB_PATH` | `sub` | `否` | 节点订阅路径 |
+| `NAME` | `node` | `否` | 节点名称前缀 |
 | `NEZHA_SERVER` | 空 | `否` | 哪吒v1填写形式: nz.abc.com:8008;哪吒v0填写形式：nz.abc.com |
 | `NEZHA_PORT` | 空 | `否` | 使用哪吒v1请留空，哪吒v0需填写 |
 | `NEZHA_KEY` | 空 | `否` | 哪吒v1的NZ_CLIENT_SECRET;哪吒v0的agent密钥 |
