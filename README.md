@@ -34,18 +34,18 @@
 
 | 变量名 | 默认值 | 必填 | 说明 |
 |--------|--------|------|------|
-| `UUID` | `beaf3a9f-b586-4bf3-a570-3103a020d72b` | `建议修改` | 服务唯一标识 |
-| `PORT` | `3000` | `3000` | 服务监听端口 |
-| `ARGO_DOMAIN` | 空 | `建议修改` | Argo Tunnel 域名 |
-| `ARGO_AUTH` | 空 | `建议修改` | Argo Tunnel 密钥 |
+| `UUID` | `beaf3a9f-b586-4bf3-a570-3103a020d72b` | `修改` | 服务唯一标识 |
+| `PORT` | `3000` | `否` | 服务监听端口 |
+| `ARGO_DOMAIN` | 空 | `修改` | Argo Tunnel 域名 |
+| `ARGO_AUTH` | 空 | `修改` | Argo Tunnel 密钥 |
 | `ARGO_PORT` | `8001` | `否` | Argo 监听端口 |
 | `CFIP` | `cdns.doon.eu.org` | 否 | Cloudflare 优选 IP |
-| `SUB_PATH` | `sub` | `建议修改` | 节点订阅路径 |
-| `NAME` | `node` | `建议修改` | 节点名称前缀 |
+| `SUB_PATH` | `sub` | `修改` | 节点订阅路径 |
+| `NAME` | `node` | `修改` | 节点名称前缀 |
 | `NEZHA_SERVER` | 空 | `否` | 哪吒v1填写形式: nz.abc.com:8008;哪吒v0填写形式：nz.abc.com |
 | `NEZHA_PORT` | 空 | `否` | 使用哪吒v1请留空，哪吒v0需填写 |
 | `NEZHA_KEY` | 空 | `否` | 哪吒v1的NZ_CLIENT_SECRET;哪吒v0的agent密钥 |
-| `ADMIN_PASSWORD` | `123456` | `建议修改` | 后台登录密码 |
+| `ADMIN_PASSWORD` | `123456` | `修改` | 后台登录密码 |
 
 容器平台 Docker 镜像：ghcr.io/llodys/node-nav:latest
 
