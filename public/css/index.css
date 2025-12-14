@@ -2,7 +2,7 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     margin: 0;
-    padding-top: 60px; /* 为固定导航栏留出空间 */
+    padding-top: 60px; 
     background-color: #f4f7f9;
     color: #333;
     line-height: 1.6;
@@ -49,19 +49,19 @@ body {
 }
 .nav-categories::-webkit-scrollbar { display: none; }
 
-/* --- 通用图标样式 (新增) --- */
+/* --- 通用图标样式 --- */
 .category-icon {
     width: 16px;
     height: 16px;
     margin-right: 6px;
     flex-shrink: 0;
     opacity: 0.7;
-    fill: currentColor; /* 跟随文字颜色 */
+    fill: currentColor; 
 }
 
 /* 导航分类链接样式 (普通单按钮) */
 .nav-category-link {
-    display: inline-flex; /* 改为 flex 以对齐图标 */
+    display: inline-flex; 
     align-items: center;
     padding: 6px 12px; 
     color: #666; text-decoration: none; font-weight: 500;
@@ -78,6 +78,7 @@ body {
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
+    height: 100%; 
 }
 
 /* 下拉触发按钮 */
@@ -112,16 +113,16 @@ body {
 }
 .nav-dropdown-btn.open .nav-arrow { transform: rotate(180deg); }
 
-/* 下拉菜单本体 (悬浮层) */
+/* 下拉菜单本体 */
 .nav-floating-menu {
     position: fixed; 
     background: #ffffff;
     border: 1px solid #dfe1e5;
-    border-radius: 8px;
+    border-radius: 6px; 
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 2000;
-    padding: 6px 0;
-    min-width: 140px; 
+    padding: 4px 0; 
+    min-width: 90px; 
     display: none;
     opacity: 0;
     transform: translateY(-10px);
@@ -137,10 +138,10 @@ body {
 .nav-menu-item {
     display: flex; 
     align-items: center;
-    padding: 8px 16px;
+    padding: 6px 10px; 
     color: #333;
     text-decoration: none;
-    font-size: 0.9em;
+    font-size: 0.85em; 
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
     white-space: nowrap;
@@ -181,13 +182,13 @@ body {
     text-align: center;
 }
 
-/* --- 优化后的搜索表单样式 --- */
+/* --- 搜索表单样式 --- */
 .search-form {
-    position: relative; /* 确保建议菜单能相对于表单定位 */
+    position: relative; 
     display: flex; 
     width: 100%; 
-    max-width: 580px; /* 略微加宽 */
-    height: 50px; /* 略微加高 */
+    max-width: 580px; 
+    height: 50px; 
     border-radius: 25px; 
     background-color: #ffffff; 
     border: 1px solid #dfe1e5; 
@@ -199,7 +200,6 @@ body {
     box-shadow: 0 4px 12px rgba(32, 33, 36, 0.1); 
 }
 
-/* 聚焦时移除边框，使用蓝色阴影光晕 */
 .search-form:focus-within {
     border-color: transparent; 
     box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28), 0 0 0 3px rgba(66, 133, 244, 0.2); 
@@ -218,9 +218,8 @@ body {
     color: inherit;
 }
 
-/* --- 优化后的搜索按钮样式 (Search Button) --- */
+/* 搜索按钮 */
 .search-button {
-    /* 背景透明，与输入框融为一体 */
     background-color: transparent; 
     border: none; 
     padding: 0 16px; 
@@ -236,13 +235,11 @@ body {
     opacity: 0.85; 
 }
 
-/* 鼠标悬停时，图标颜色加深 */
 .search-button:hover { 
     color: #1a73e8; 
     opacity: 1;
 }
 
-/* 聚焦时，图标颜色加深 */
 .search-form:focus-within .search-button {
     color: #1a73e8; 
     opacity: 1;
@@ -292,7 +289,6 @@ body {
     .search-bar-container { padding: 10px 10px 0 10px; } 
     .main-title { font-size: 2.5em; margin-bottom: 15px; } 
     
-    /* 移动端搜索框适配 */
     .search-form { max-width: 100%; height: 44px; border-radius: 22px; }
     .search-input { font-size: 15px; padding: 0 8px 0 16px; border-radius: 22px 0 0 22px; }
     .search-button { height: 42px; padding: 0 12px; border-radius: 0 22px 22px 0; }
@@ -316,76 +312,16 @@ body {
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* ============================================== */
-/* --- 书签搜索建议样式 (新增) --- */
-/* ============================================== */
-
-.bookmark-suggestions-menu {
-    position: absolute;
-    top: 100%; /* 位于搜索框下方 */
-    left: 0;
-    right: 0;
-    margin-top: 5px; /* 与搜索框的间隔 */
-    background: #ffffff;
-    border: 1px solid #dfe1e5;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    z-index: 100;
-    max-height: 300px;
-    overflow-y: auto;
-    display: none; /* 默认隐藏 */
-}
-
-.suggestion-item {
-    display: flex; 
-    align-items: center;
-    padding: 8px 12px;
-    color: #333;
-    text-decoration: none;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.suggestion-item:hover { 
-    background-color: #f4f8fe; 
-    color: #1a73e8; 
-}
-.suggestion-item-icon {
-    width: 16px; 
-    height: 16px; 
-    object-fit: contain; 
-    margin-right: 8px;
-    border-radius: 2px;
-    flex-shrink: 0;
-}
-.suggestion-item-name {
-    font-weight: 500;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.suggestion-item-category {
-    font-size: 0.8em;
-    color: #999;
-    margin-left: 8px;
-    flex-shrink: 0;
-}
-
-
 /* ================= 深色模式 (Dark Mode) ================= */
 body.dark-mode { background-color: #171923; color: #e2e8f0; }
 
 body.dark-mode .navbar { background-color: #1a202c; border-bottom: 1px solid #2d3748; box-shadow: none; }
 body.dark-mode .navbar-brand { color: #e2e8f0; }
 
-/* 导航链接深色适配 */
 body.dark-mode .nav-category-link { color: #a0aec0; }
 body.dark-mode .nav-category-link:hover { background-color: #2d3748; color: #fff; }
 body.dark-mode .nav-category-link.active { background-color: #3182ce; color: #fff; }
 
-/* 下拉菜单深色适配 */
 body.dark-mode .nav-dropdown-btn { color: #a0aec0; }
 body.dark-mode .nav-dropdown-btn:hover { background-color: #2d3748; color: #fff; }
 body.dark-mode .nav-dropdown-btn.active { background-color: #3182ce; color: #fff; }
@@ -394,7 +330,6 @@ body.dark-mode .nav-menu-item { color: #e2e8f0; }
 body.dark-mode .nav-menu-item:hover { background-color: #4a5568; }
 body.dark-mode .nav-menu-item.active { background-color: #3182ce; color: #fff; }
 
-/* 搜索框深色 */
 body.dark-mode .main-title { color: #e2e8f0; } 
 
 body.dark-mode .search-form { 
@@ -404,44 +339,20 @@ body.dark-mode .search-form {
 }
 body.dark-mode .search-form:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
 
-/* 深色模式聚焦状态 */
 body.dark-mode .search-form:focus-within {
     border-color: transparent;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(66, 133, 244, 0.35); 
 }
 
-/* 深色模式下按钮颜色 */
-body.dark-mode .search-button { color: #63b3ed; } /* 浅蓝色 */
+body.dark-mode .search-button { color: #63b3ed; } 
 body.dark-mode .search-button:hover,
 body.dark-mode .search-form:focus-within .search-button { 
-    color: #4299e1; /* 稍深的蓝色 */
+    color: #4299e1; 
     background-color: transparent;
 }
 
-/* 书签卡片深色 */
 body.dark-mode .bookmark-card { background-color: #1a202c; border-color: #2d3748; color: #e2e8f0; }
 body.dark-mode .bookmark-card:hover { background-color: #2d3748; border-color: #4a5568; box-shadow: 0 8px 16px rgba(0,0,0,0.3); color: #63b3ed; }
 
-/* Loader 深色 */
 body.dark-mode #global-loader { background-color: #171923; }
 body.dark-mode .loader-spinner { border-color: #2d3748; border-top-color: #3182ce; }
-
-/* ============================================== */
-/* --- 搜索建议深色模式适配 (新增) --- */
-/* ============================================== */
-
-body.dark-mode .bookmark-suggestions-menu {
-    background-color: #2d3748; 
-    border-color: #4a5568;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-body.dark-mode .suggestion-item {
-    color: #e2e8f0;
-}
-body.dark-mode .suggestion-item:hover { 
-    background-color: #4a5568; 
-    color: #63b3ed;
-}
-body.dark-mode .suggestion-item-category {
-    color: #a0aec0;
-}
