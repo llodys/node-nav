@@ -26,9 +26,6 @@
             
             <form id="search-form" class="search-form" action="https://www.google.com/search" method="get" target="_blank">
                 <input type="text" name="q" id="search-input" class="search-input" placeholder="搜索书签或 Google 搜索..." autocomplete="off">
-                
-                <div id="bookmark-suggestions" class="bookmark-suggestions-menu"></div>
-                
                 <button type="submit" class="search-button">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
                         <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -43,8 +40,9 @@
 
     <script>
         let allBookmarksData = {};
-        let flatBookmarksList = []; // 新增：用于搜索的扁平化列表
+        let flatBookmarksList = []; 
         let currentCategory = ''; 
+        let menuHideTimer = null; 
 
         const folderIconSvg = `<svg class="category-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
 
@@ -63,72 +61,26 @@
         }
         
         // ======================================
-        // =========== 搜索相关函数 (新增) ==========
+        // =========== 搜索逻辑 (简化版) =========
         // ======================================
         
-        /**
-         * 隐藏搜索建议菜单
-         */
-        function hideSuggestions() {
-            const suggestionsMenu = document.getElementById('bookmark-suggestions');
-            if(suggestionsMenu) suggestionsMenu.style.display = 'none';
-        }
-
-        /**
-         * 搜索并渲染建议结果
-         * @param {string} query 搜索关键词
-         */
         function searchBookmarks(query) {
-            const suggestionsMenu = document.getElementById('bookmark-suggestions');
-            if(!suggestionsMenu) return;
-
-            suggestionsMenu.innerHTML = ''; 
-
+            // 1. 如果搜索框为空，恢复当前分类显示
             if (!query || query.length < 1) {
-                suggestionsMenu.style.display = 'none';
+                switchCategory(currentCategory); 
                 return;
             }
 
             const lowerCaseQuery = query.toLowerCase();
 
-            // 搜索逻辑：过滤书签名称或URL包含关键词的项
+            // 2. 搜索逻辑
             const results = flatBookmarksList.filter(item => 
                 (item.name && item.name.toLowerCase().includes(lowerCaseQuery)) ||
                 (item.url && item.url.toLowerCase().includes(lowerCaseQuery))
-            ).slice(0, 10); // 限制最多显示10条结果
+            );
 
-            if (results.length === 0) {
-                suggestionsMenu.style.display = 'none';
-                return;
-            }
-
-            results.forEach(item => {
-                const itemDiv = document.createElement('a');
-                itemDiv.className = 'suggestion-item';
-                itemDiv.href = item.url;
-                itemDiv.target = '_blank';
-                itemDiv.rel = 'noopener noreferrer';
-                
-                // 使用书签图标，如果没有则显示默认图标
-                const iconHtml = item.icon 
-                    ? `<img src="${item.icon}" alt="icon" class="suggestion-item-icon" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=' + new URL(item.url).hostname">` 
-                    : `<span class="suggestion-item-icon" style="color:#007bff; font-weight:bold;">🔗</span>`;
-                
-                // 提取子分类的简单名称 (例如：'开发 / 前端' -> '前端')
-                const displayCategory = item.categoryName.split(' / ').pop();
-
-                itemDiv.innerHTML = `${iconHtml}<span class="suggestion-item-name">${item.name || '未命名'}</span><span class="suggestion-item-category">${displayCategory}</span>`;
-                
-                // 点击书签后清空输入框和建议列表
-                itemDiv.onclick = () => {
-                    document.getElementById('search-input').value = '';
-                    hideSuggestions();
-                };
-
-                suggestionsMenu.appendChild(itemDiv);
-            });
-
-            suggestionsMenu.style.display = 'block';
+            // 3. 仅更新主界面网格
+            renderBookmarksGrid(results, query);
         }
 
         // ======================================
@@ -140,7 +92,6 @@
             const loader = document.getElementById('global-loader'); 
             const mainTitle = document.getElementById('site-main-title');
             
-            // --- 获取表单和输入框元素 ---
             const searchForm = document.getElementById('search-form');
             const searchInput = document.getElementById('search-input');
             
@@ -150,7 +101,6 @@
                 const data = await response.json();
                 allBookmarksData = data;
 
-                // --- 新增：创建扁平化书签列表 ---
                 flatBookmarksList = [];
                 const ignoredKeysForFlatList = ['categories', 'adminAvatar', 'password', 'settings'];
                 Object.keys(allBookmarksData).forEach(category => {
@@ -158,17 +108,13 @@
                         allBookmarksData[category].forEach(bookmark => {
                             flatBookmarksList.push({
                                 ...bookmark,
-                                categoryName: category // 添加分类信息
+                                categoryName: category 
                             });
                         });
                     }
                 });
-                // ------------------------------------
 
-
-                // --- 更新标题和 Logo ---
                 const siteTitle = (allBookmarksData.settings && allBookmarksData.settings.siteTitle) ? allBookmarksData.settings.siteTitle : 'Node Nav';
-                
                 document.title = siteTitle;
                 
                 const brandLink = document.querySelector('.navbar-brand');
@@ -182,7 +128,6 @@
                 if (mainTitle) {
                     mainTitle.textContent = siteTitle;
                 }
-                // --- 标题更新结束 ---
 
                 const themeSetting = (allBookmarksData.settings && allBookmarksData.settings.theme) ? allBookmarksData.settings.theme : 'auto';
                 applyTheme(themeSetting);
@@ -209,8 +154,18 @@
                     floatingMenu.className = 'nav-floating-menu';
                     document.body.appendChild(floatingMenu);
                     
+                    floatingMenu.onmouseenter = () => {
+                        if (menuHideTimer) clearTimeout(menuHideTimer);
+                    };
+                    floatingMenu.onmouseleave = () => {
+                        menuHideTimer = setTimeout(() => {
+                            floatingMenu.classList.remove('show');
+                            document.querySelectorAll('.nav-dropdown-btn').forEach(b => b.classList.remove('open'));
+                        }, 200);
+                    };
+
                     document.addEventListener('click', (e) => {
-                        if (!e.target.closest('.nav-dropdown-btn') && !e.target.closest('.nav-floating-menu')) {
+                        if (!e.target.closest('.nav-dropdown-wrapper') && !e.target.closest('.nav-floating-menu')) {
                             floatingMenu.classList.remove('show');
                             document.querySelectorAll('.nav-dropdown-btn').forEach(b => b.classList.remove('open'));
                         }
@@ -219,6 +174,7 @@
 
                 let firstCategoryToRender = null;
 
+                // --- 渲染导航按钮 ---
                 Object.keys(groups).forEach(rootName => {
                     const subKeys = groups[rootName];
                     
@@ -233,13 +189,15 @@
                             if(targetLink) {
                                 switchCategory(rootName);
                                 highlightNav(targetLink);
+                                if(searchInput) {
+                                    searchInput.value = '';
+                                }
                             }
                         };
                         navContainer.appendChild(btn);
                         if (!firstCategoryToRender) firstCategoryToRender = { type: 'link', el: btn, cat: rootName };
                     
                     } else {
-                        // 渲染下拉按钮
                         const wrapper = document.createElement('div');
                         wrapper.className = 'nav-dropdown-wrapper';
 
@@ -250,27 +208,30 @@
                         btn.dataset.group = rootName;
                         
                         btn.onclick = (e) => {
-                            e.stopPropagation();
-                            const isRootActive = (currentCategory === rootName);
-                            const isMenuOpen = btn.classList.contains('open');
-
-                            if (!isRootActive) {
-                                switchCategory(rootName);
-                                btn.querySelector('span').innerText = rootName; 
-                                highlightNav(btn);
-                                
-                                floatingMenu.classList.remove('show');
-                                document.querySelectorAll('.nav-dropdown-btn').forEach(b => b.classList.remove('open'));
-                            } else {
-                                if (isMenuOpen) {
-                                    floatingMenu.classList.remove('show');
-                                    btn.classList.remove('open');
-                                } else {
-                                    document.querySelectorAll('.nav-dropdown-btn').forEach(b => b.classList.remove('open'));
-                                    btn.classList.add('open');
-                                    showFloatingMenu(btn, subKeys, rootName);
-                                }
+                            switchCategory(rootName);
+                            btn.querySelector('span').innerText = rootName; 
+                            highlightNav(btn);
+                            floatingMenu.classList.remove('show');
+                            btn.classList.remove('open');
+                            if(searchInput) {
+                                searchInput.value = '';
                             }
+                        };
+
+                        wrapper.onmouseenter = () => {
+                            if (menuHideTimer) clearTimeout(menuHideTimer);
+                            document.querySelectorAll('.nav-dropdown-btn').forEach(b => {
+                                if (b !== btn) b.classList.remove('open');
+                            });
+                            btn.classList.add('open');
+                            showFloatingMenu(btn, subKeys, rootName);
+                        };
+
+                        wrapper.onmouseleave = () => {
+                            menuHideTimer = setTimeout(() => {
+                                floatingMenu.classList.remove('show');
+                                btn.classList.remove('open');
+                            }, 200);
                         };
                         
                         wrapper.appendChild(btn);
@@ -297,43 +258,24 @@
                 setTimeout(() => { if(loader) loader.classList.add('hidden'); }, 300);
             }
 
-            // --- 修改和新增：添加搜索事件监听器 ---
             if (searchForm && searchInput) {
-                // 修改：处理表单提交
                 searchForm.addEventListener('submit', function(e) {
-                    // 如果输入框没有值，阻止默认的 Google 搜索
+                    // 如果输入框没有内容，阻止提交
                     if (!searchInput.value.trim()) {
                         e.preventDefault(); 
-                        hideSuggestions(); 
                     }
-                    
-                    // 延迟清空，确保浏览器先执行搜索跳转
-                    setTimeout(() => {
-                        searchInput.value = '';
-                        hideSuggestions();
-                    }, 100); 
                 });
                 
-                // 新增：实时输入监听事件
                 searchInput.addEventListener('input', function() {
                     searchBookmarks(this.value.trim());
                 });
 
-                // 新增：点击搜索框外部时隐藏建议
-                document.addEventListener('click', (e) => {
-                    if (!e.target.closest('.search-form')) {
-                        hideSuggestions();
-                    }
-                });
-
-                // 新增：重新点击输入框时，如果内容不为空，重新显示建议
                 searchInput.addEventListener('focus', function() {
                     if (this.value.trim()) {
                         searchBookmarks(this.value.trim());
                     }
                 });
             }
-            // ------------------------------------
         }
 
         function showFloatingMenu(triggerBtn, keys, rootName) {
@@ -362,13 +304,29 @@
 
                     menu.classList.remove('show');
                     triggerBtn.classList.remove('open');
+                    
+                    const searchInput = document.getElementById('search-input');
+                    if(searchInput) {
+                        searchInput.value = '';
+                    }
                 };
                 menu.appendChild(item);
             });
 
-            menu.style.left = `${rect.left}px`;
+            // 居中对齐逻辑
+            menu.style.visibility = 'hidden';
+            menu.style.display = 'block';
+            const menuWidth = menu.offsetWidth;
+            const btnCenter = rect.left + (rect.width / 2);
+            let leftPos = btnCenter - (menuWidth / 2);
+            if (leftPos < 10) leftPos = 10;
+            menu.style.left = `${leftPos}px`;
             menu.style.top = `${rect.bottom + 5}px`;
-            menu.classList.add('show');
+            menu.style.visibility = '';
+            menu.style.display = ''; 
+            requestAnimationFrame(() => {
+                menu.classList.add('show');
+            });
         }
 
         function highlightNav(targetEl) {
@@ -377,29 +335,50 @@
             if (targetEl) targetEl.classList.add('active');
         }
 
-        function switchCategory(categoryName) {
-            currentCategory = categoryName; 
+        // --- 通用渲染函数 ---
+        function renderBookmarksGrid(items, emptyMsgStr) {
             const container = document.getElementById('bookmarks-container');
-            const items = Array.isArray(allBookmarksData[categoryName]) ? allBookmarksData[categoryName] : [];
-
             container.innerHTML = ''; 
+            
             if (items.length === 0) {
-                 container.innerHTML = `<div style="text-align:center; margin-top:20px; color:#999;">暂无书签。</div>`;
+                 const msg = emptyMsgStr 
+                    ? `没有找到匹配的书签，按回车可进行 Google 搜索` 
+                    : `暂无书签`;
+                 
+                 container.innerHTML = `<div style="text-align:center; margin-top:40px; color:#999; font-size: 0.9em;">${msg}</div>`;
                  return;
             }
+
             const gridDiv = document.createElement('div');
             gridDiv.className = 'bookmark-grid';
+            
             items.forEach(item => {
                 const a = document.createElement('a');
                 a.href = item.url;
                 a.className = 'bookmark-card';
                 a.target = '_blank';
                 a.rel = 'noopener noreferrer';
-                const iconHtml = item.icon ? `<img src="${item.icon}" alt="icon" class="bookmark-icon" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=google.com'">` : '<span>🔗</span>';
-                a.innerHTML = `${iconHtml}<div class="bookmark-name" title="${item.name}">${item.name || '未命名'}</div>`;
+                
+                const iconHtml = item.icon 
+                    ? `<img src="${item.icon}" alt="icon" class="bookmark-icon" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=google.com'">` 
+                    : '<span>🔗</span>';
+                
+                let categoryTag = '';
+                if (emptyMsgStr && item.categoryName) {
+                    const simpleCat = item.categoryName.split(' / ').pop();
+                    categoryTag = `<div style="font-size:10px; color:#999; margin-top:2px;">${simpleCat}</div>`;
+                }
+
+                a.innerHTML = `${iconHtml}<div class="bookmark-name" title="${item.name}">${item.name || '未命名'}</div>${categoryTag}`;
                 gridDiv.appendChild(a);
             });
             container.appendChild(gridDiv);
+        }
+
+        function switchCategory(categoryName) {
+            currentCategory = categoryName; 
+            const items = Array.isArray(allBookmarksData[categoryName]) ? allBookmarksData[categoryName] : [];
+            renderBookmarksGrid(items);
         }
 
         document.addEventListener('DOMContentLoaded', initApp);
