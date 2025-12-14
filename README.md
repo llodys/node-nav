@@ -42,10 +42,12 @@
 | `CFIP` | `cdns.doon.eu.org` | 否 | Cloudflare 优选 IP |
 | `SUB_PATH` | `sub` | 否 | 节点订阅路径（如 `/sub/`） |
 | `NAME` | `node` | 否 | 节点名称前缀 |
-| `ADMIN_PASSWORD` | `123456` | 是（建议修改） | 后台登录密码 |
 | `NEZHA_SERVER` | 空 | 否 | 哪吒v1填写形式: nz.abc.com:8008  哪吒v0填写形式：nz.abc.com |
 | `NEZHA_PORT` | 空 | 否 | 使用哪吒v1请留空，哪吒v0需填写 |
 | `NEZHA_KEY` | 空 | 否 | 哪吒v1的NZ_CLIENT_SECRET或哪吒v0的agent密钥 |
+| `ADMIN_PASSWORD` | `123456` | 是（建议修改） | 后台登录密码 |
+
+容器Docker镜像：ghcr.io/llodys/node-nav:latest
 
 ---
 
