@@ -5,13 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Node Nav - 登录</title>
     <link rel="stylesheet" href="css/login.css">
+    <script src="js/login.js" defer></script>
 </head>
 <body>
-    <div id="global-loader">
-        <div class="loader-spinner"></div>
-    </div>
+    <script>
+        // 防闪烁脚本
+        (function() {
+            try {
+                const cachedTheme = localStorage.getItem('node_nav_theme');
+                const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                let isDark = false;
+                if (cachedTheme === 'dark') isDark = true;
+                else if (cachedTheme === 'light') isDark = false;
+                else isDark = systemDark;
+                if (isDark) document.body.classList.add('dark-mode');
+            } catch(e) {}
+        })();
+    </script>
 
-    <div class="login-card">
+    <div class="login-card" id="login-card" style="opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease-out, transform 0.5s ease-out, background-color 0.3s;">
         <div class="login-title">
             <span>⚡</span> Node Nav
         </div>
@@ -20,113 +32,10 @@
         
         <div id="error-msg" class="error-message"></div>
         
-        <button id="btn-submit" class="btn-submit" onclick="performLogin()">登 录</button>
-        
-        <a href="/" class="back-link">← 返回首页</a>
+        <div class="form-footer">
+            <a href="/" class="back-link">返回首页</a>
+            <button id="btn-submit" class="btn-submit" onclick="performLogin()">登 录</button>
+        </div>
     </div>
-
-    <script>
-        const pwdInput = document.getElementById('password');
-        const errorMsg = document.getElementById('error-msg');
-        const submitBtn = document.getElementById('btn-submit');
-
-        function applyTheme(mode) {
-            let isDark = false;
-            if (mode === 'auto') {
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    isDark = true;
-                }
-            } else if (mode === 'dark') {
-                isDark = true;
-            }
-
-            if (isDark) document.body.classList.add('dark-mode');
-            else document.body.classList.remove('dark-mode');
-        }
-
-        window.addEventListener('load', async () => {
-            const loader = document.getElementById('global-loader');
-            
-            try {
-                const res = await fetch('/api/bookmarks');
-                if(res.ok) {
-                    const data = await res.json();
-                    
-                    // 应用主题
-                    const theme = (data.settings && data.settings.theme) ? data.settings.theme : 'auto';
-                    applyTheme(theme);
-
-                    // 获取站点标题，默认为 Node Nav
-                    const baseTitle = (data.settings && data.settings.siteTitle) ? data.settings.siteTitle : 'Node Nav';
-                    
-                    // 1. 浏览器标签页标题 (保持描述性)
-                    document.title = baseTitle + ' - 登录'; 
-                    
-                    // 2. 可视 UI 标题 (只显示品牌名称)
-                    const titleDiv = document.querySelector('.login-title');
-                    if(titleDiv) {
-                        titleDiv.innerHTML = '<span>⚡</span> ' + baseTitle;
-                    }
-                }
-            } catch(e) {
-                console.log('获取数据失败，使用默认设置');
-            } finally {
-                setTimeout(() => {
-                    if(loader) loader.classList.add('hidden');
-                }, 300);
-            }
-        });
-
-        function showError(text) {
-            errorMsg.innerText = text;
-            errorMsg.classList.add('show');
-            pwdInput.classList.add('error');
-            setTimeout(() => { pwdInput.classList.remove('error'); }, 400); 
-        }
-
-        pwdInput.addEventListener('input', () => {
-            errorMsg.classList.remove('show');
-            pwdInput.classList.remove('error');
-        });
-
-        async function performLogin() {
-            const pwd = pwdInput.value;
-            if(!pwd) { showError('请输入密码'); pwdInput.focus(); return; }
-
-            submitBtn.disabled = true;
-            submitBtn.innerText = '登录中...';
-
-            try {
-                const res = await fetch('/check-password', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ password: pwd })
-                });
-                
-                const contentType = res.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) throw new Error("Server error");
-
-                const data = await res.json();
-
-                if(data.success) {
-                    sessionStorage.setItem('auth_token', pwd);
-                    setTimeout(() => { window.location.href = '/admin'; }, 300);
-                } else {
-                    showError('密码错误，请重试');
-                    pwdInput.value = ''; pwdInput.focus();
-                }
-            } catch(e) {
-                console.error(e);
-                showError('网络请求失败');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerText = '登 录';
-            }
-        }
-
-        pwdInput.addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') performLogin();
-        });
-    </script>
 </body>
 </html>

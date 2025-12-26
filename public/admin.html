@@ -2,24 +2,50 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Node Nav - 管理</title>
     
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-    <link rel="stylesheet" href="css/admin.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" defer></script>
+
+    <link rel="stylesheet" href="css/admin.css?v=36.0">
 
     <script>
         const token = sessionStorage.getItem('auth_token');
-        if (!token) {
-            window.location.href = '/login';
-        }
-    </script>
-</head>
-<body style="display: none;">
+        if (!token) window.location.href = '/login';
 
-    <div id="global-loader">
-        <div class="loader-spinner"></div>
+        (function() {
+            try {
+                const cachedTheme = localStorage.getItem('node_nav_theme');
+                const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                let isDark = false;
+                if (cachedTheme === 'dark') isDark = true;
+                else if (cachedTheme === 'light') isDark = false;
+                else isDark = systemDark;
+                if (isDark) document.body.classList.add('dark-mode');
+            } catch(e) {}
+        })();
+    </script>
+    
+    <script src="js/admin.js?v=36.0" defer></script>
+</head>
+<body>
+    <div id="bookmarkModal" class="modal-overlay" onclick="if(event.target === this) closeModal()">
+        <div class="modal-card">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle">添加书签</span>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="inpName" class="form-control" placeholder="名称 (例如: Google)">
+                <input type="text" id="inpUrl" class="form-control" placeholder="网址 (例如: google.com)" onblur="autoParseUrl()" inputmode="url" enterkeyhint="next">
+                <input type="text" id="inpIcon" class="form-control" placeholder="图标地址 (可选)">
+                <select id="inpCat" class="form-control"></select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-save-modal" id="btnSaveAction" onclick="addOrUpdateBookmark()">保存</button>
+            </div>
+        </div>
     </div>
 
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -29,55 +55,69 @@
         <span id="toastMsg">操作成功</span>
     </div>
 
-    <div class="admin-wrapper">
+    <input type="file" id="importFileBtn" style="display: none;" accept=".json" onchange="handleImportFile(this)">
+
+    <button id="fab-add" class="fab-btn" onclick="openAddModal()" title="添加新书签">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+    </button>
+
+    <div class="admin-wrapper fade-slide-up" id="admin-wrapper">
+        
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <div class="logo-icon" style="background: none; border: none; padding: 0; width: auto; height: auto; display: flex; align-items: center; justify-content: center;">
-                    <span style="font-size: 24px;">⚡</span>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="logo-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff;">
+                        <span style="font-size: 24px;">⚡</span>
+                    </div>
+                    <span class="logo-text">Node Nav</span>
                 </div>
-                <span class="logo-text">Node Nav</span>
+                <button class="mobile-close-btn" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
 
             <div class="sidebar-body">
-                <div class="menu-item" id="menu-settings" onclick="handleMenuClick('profile', this)">
-                    <svg class="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    <span class="menu-text">系统设置</span>
-                </div>
-                
-                <div class="menu-item" id="menu-wallpaper" onclick="handleMenuClick('wallpaper', this)">
-                    <svg class="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                    <span class="menu-text">壁纸设置</span>
-                </div>
-                
-                <div class="divider"></div>
-
-                <div class="menu-item active" id="menu-bookmarks" onclick="handleMenuClick('bookmarks', this)">
-                    <svg class="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-                    <span class="menu-text">书签管理</span>
+                <div class="sidebar-main-nav">
+                    <div class="menu-item" id="nav-item-settings" onclick="handleMenuClick('settings', this)">
+                        <svg class="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <span class="menu-text">系统设置</span>
+                    </div>
+                    
+                    <div class="menu-item active" id="nav-item-bookmarks" onclick="handleMenuClick('bookmarks', this)">
+                        <svg class="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                        <span class="menu-text">书签管理</span>
+                    </div>
+                    
+                    <div class="divider"></div>
                 </div>
 
-                <div class="section-label">分类管理</div>
-
-                <div class="cat-input-group" style="margin-bottom: 10px;">
-                    <input type="text" id="newCatName" class="cat-input" placeholder="新建分类...">
-                    <button class="btn-add-cat" onclick="addCategory()" title="添加分类">+</button>
+                <div id="sidebar-cat-manager">
+                    <div class="section-label" style="margin-top: 0;">分类管理</div>
+                    <div class="cat-input-group">
+                        <input type="text" id="newCatName" class="cat-input" placeholder="新建分类...">
+                        <button class="btn-add-cat" onclick="addCategory()" title="添加分类">+</button>
+                    </div>
+                    <div id="catListContainer" class="cat-list-wrapper"></div>
                 </div>
 
-                <div id="catListContainer" class="cat-list-wrapper"></div>
-            </div>
-
-            <div class="sidebar-footer">
-                <div class="user-avatar">
-                    <svg viewBox="0 0 24 24" fill="#999" stroke="none"><circle cx="12" cy="12" r="12"/></svg>
-                    <div class="status-dot"></div>
+                <div id="sidebar-settings-nav" style="display: none;">
+                    <div class="section-label" style="margin-top: 0;">设置菜单</div>
+                    <div class="menu-item active" id="btn-set-basic" onclick="switchSettingSubView('set-basic', this)">
+                        <svg class="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        <span class="menu-text">基本设置</span>
+                    </div>
+                    <div class="menu-item" id="btn-set-theme" onclick="switchSettingSubView('set-theme', this)">
+                        <svg class="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                        <span class="menu-text">设置外观</span>
+                    </div>
+                    <div class="menu-item" id="btn-set-wallpaper" onclick="switchSettingSubView('set-wallpaper', this)">
+                        <svg class="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <span class="menu-text">设置壁纸</span>
+                    </div>
                 </div>
-                <div class="user-info">
-                    <div class="user-name">Admin</div>
-                    <div class="user-email">已连接</div>
-                </div>
-                <button class="btn-logout-icon" onclick="logout()" title="退出登录">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                </button>
             </div>
         </aside>
 
@@ -87,733 +127,100 @@
                     <button class="mobile-menu-btn" onclick="toggleSidebar()">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
-                    <h2 class="page-title" id="pageTitle">书签管理</h2>
-                </div>
-                <div class="nav-right">
-                    <a href="/" class="btn-nav-link" target="_blank">
-                        <span class="nav-text">查看前台</span>
+                    </div>
+
+                <div class="nav-right" style="gap: 8px;">
+                    <button class="btn-icon-nav" onclick="exportBookmarks()" title="导出备份">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </button>
+                    <button class="btn-icon-nav" onclick="triggerImport()" title="导入备份">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    </button>
+                    <div style="width:1px; height:20px; background:var(--border-color); margin:0 4px;"></div>
+                    <a href="/" class="btn-nav-link" target="_blank" title="查看前台">
+                        <span class="nav-text" style="margin-right:5px;">前台</span>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                     </a>
+                    <button class="btn-icon-nav" onclick="logout()" title="退出登录" style="color: #e53e3e;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    </button>
                 </div>
             </header>
 
             <div class="scroll-content">
-                
                 <div id="view-bookmarks" class="view-section active">
-                    <div id="sortTip" class="sort-tip" style="display:none;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                        <span>提示：拖动分类可调整顺序，主分类会带动其子分类一起移动。</span>
-                    </div>
-
-                    <div class="input-card">
-                        <input type="text" id="inpName" class="form-control" placeholder="名称 (例如: Google)">
-                        <input type="text" id="inpUrl" class="form-control" placeholder="网址 (例如: google.com)" onblur="autoParseUrl()">
-                        <input type="text" id="inpIcon" class="form-control" placeholder="图标地址 (可选)">
-                        <select id="inpCat" class="form-control"></select>
-                        
-                        <button class="btn-save" id="btnSaveAction" onclick="addOrUpdateBookmark()">保存书签</button>
-                        <button class="btn-save" id="btnCancelEdit" onclick="resetForm()" style="background:#a0aec0; display:none;">取消编辑</button>
-                    </div>
-                    
                     <div class="grid-container">
                         <div id="bookmarkGrid" class="bookmark-grid"></div>
                     </div>
-                </div>
+                </div> 
 
                 <div id="view-settings" class="view-section">
-                    <div class="settings-card">
-                        <div class="settings-title">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                            基本设置
+                    <div id="set-basic" class="settings-card">
+                        <div class="settings-header">
+                            <div class="settings-title">基本设置</div>
+                            <p class="settings-subtitle">管理网站的全局配置信息。</p>
                         </div>
-                        
-                        <div style="margin-bottom: 20px;">
-                            <label style="display:block; color:#718096; font-size:0.9rem; margin-bottom:8px;">网站标题</label>
-                            <div style="display:flex; gap:10px; max-width: 600px;">
+                        <div class="form-group">
+                            <label class="form-label">网站标题</label>
+                            <div class="input-with-button">
                                 <input type="text" id="sys-site-title" class="form-control" placeholder="默认为：Node Nav">
-                                <button class="btn-save" onclick="saveSystemSettings()">保存设置</button>
+                                <button class="btn-save" onclick="saveSystemSettings()">保存</button>
                             </div>
-                            <p style="color:#a0aec0; font-size:0.8rem; margin-top:6px;">修改后将应用到浏览器标签页标题和左上角 Logo 文字。</p>
+                            <p class="form-help">该标题将显示在浏览器标签页和侧边栏顶部。</p>
                         </div>
                     </div>
-                </div>
 
-                <div id="view-wallpaper" class="view-section">
-                    <div class="settings-card">
-                        <div class="settings-title">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                            主题外观
+                    <div id="set-theme" class="settings-card" style="display: none;">
+                        <div class="settings-header">
+                            <div class="settings-title">主题外观</div>
+                            <p class="settings-subtitle">选择您喜欢的界面风格。</p>
                         </div>
-                        <p style="color:#718096; font-size:0.9rem; margin-bottom:15px;">选择导航页的整体配色风格。</p>
+                        <div class="theme-grid">
+                            <div class="theme-card" id="theme-opt-auto" onclick="setTheme('auto')">
+                                <div class="theme-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+                                <div class="theme-info"><span class="theme-name">跟随系统</span></div>
+                                <div class="theme-check"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                            </div>
+                            <div class="theme-card" id="theme-opt-light" onclick="setTheme('light')">
+                                <div class="theme-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></div>
+                                <div class="theme-info"><span class="theme-name">浅色模式</span></div>
+                                <div class="theme-check"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                            </div>
+                            <div class="theme-card" id="theme-opt-dark" onclick="setTheme('dark')">
+                                <div class="theme-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></div>
+                                <div class="theme-info"><span class="theme-name">深色模式</span></div>
+                                <div class="theme-check"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                            </div>
+                        </div>
+                    </div>
                         
-                        <div class="theme-selector-group">
-                            <div class="theme-option-wrapper" onclick="setTheme('auto')" id="theme-opt-auto">
-                                <div class="theme-circle bg-auto"></div>
-                                <span class="theme-label">跟随系统</span>
-                            </div>
-                            <div class="theme-option-wrapper" onclick="setTheme('light')" id="theme-opt-light">
-                                <div class="theme-circle bg-light"></div>
-                                <span class="theme-label">浅色模式</span>
-                            </div>
-                            <div class="theme-option-wrapper" onclick="setTheme('dark')" id="theme-opt-dark">
-                                <div class="theme-circle bg-dark"></div>
-                                <span class="theme-label">深色模式</span>
+                    <div id="set-wallpaper" class="settings-card" style="display: none;">
+                        <div class="settings-header">
+                            <div class="settings-title">设置壁纸</div>
+                            <p class="settings-subtitle">设置背景图片或使用 Bing 每日美图。</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">图片地址</label>
+                            <div class="input-with-button">
+                                <input type="text" id="custom-bg-url" class="form-control" placeholder="https://example.com/wallpaper.jpg">
+                                <button class="btn-save" onclick="saveWallpaper()">应用</button>
+                                <button class="btn-outline-danger" onclick="clearWallpaper()">清除</button>
                             </div>
                         </div>
+                        <div class="form-group" style="margin-top: 30px;">
+                            <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+                                Bing 每日美图
+                                <span style="font-size:0.75rem; font-weight:400; color:var(--text-sub);">点击即可应用</span>
+                            </label>
+                            <div id="bing-loading" style="display:none; text-align:center; padding:30px; color:var(--text-sub); font-size:0.9rem; background:rgba(0,0,0,0.02); border-radius:12px;">
+                                ⏳ 正在获取 Bing 美图...
+                            </div>
+                            <div id="bing-grid" class="bing-grid"></div>
+                        </div>
                     </div>
-                </div>
-
+                </div> 
             </div>
         </main>
     </div>
-
-    <script>
-        let bookmarksData = {};
-        let currentCategory = ''; 
-        let editMode = false;
-        let editTargetCat = '';
-        let editTargetIndex = -1;
-        const ignoredKeys = ['categories', 'adminAvatar', 'password', 'settings'];
-        const defaultIconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2" style="width:100%;height:100%"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
-
-        let catSortable = null;
-        let subSortables = [];
-        let bmSortable = null;
-        let saveTimeout = null;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.body.style.display = 'block'; 
-            loadData();
-            
-            // 书签操作委托
-            document.getElementById('bookmarkGrid').addEventListener('click', (e) => {
-                const btn = e.target.closest('button');
-                if(!btn) return;
-                const action = btn.dataset.action;
-                const cat = btn.dataset.cat;
-                const index = parseInt(btn.dataset.index);
-                if(action === 'edit') editBookmark(cat, index);
-                if(action === 'delete') deleteBookmark(cat, index);
-            });
-
-            // 分类列表的事件委托
-            document.getElementById('catListContainer').addEventListener('click', (e) => {
-                const btn = e.target.closest('button');
-                const item = e.target.closest('.menu-item');
-
-                // 1. 按钮操作
-                if (btn) {
-                    e.stopPropagation(); 
-                    const action = btn.dataset.action;
-                    const cat = btn.dataset.cat;
-                    if(action === 'edit') renameCategory(cat);
-                    if(action === 'delete') deleteCategory(cat);
-                    if(action === 'level-up') changeLevel(cat, 'up');
-                    if(action === 'level-down') changeLevel(cat, 'down');
-                    return; 
-                }
-
-                // 2. 切换分类
-                if (item) {
-                    const cat = item.getAttribute('data-id');
-                    if(cat) {
-                        currentCategory = cat; 
-                        switchView('bookmarks'); 
-                        renderUI();
-                        if(window.innerWidth<=900) toggleSidebar(); 
-                    }
-                }
-            });
-        });
-
-        function renderCategories() {
-            const container = document.getElementById('catListContainer');
-            container.innerHTML = '';
-            
-            if (catSortable) { catSortable.destroy(); catSortable = null; }
-            subSortables.forEach(s => s.destroy());
-            subSortables = [];
-
-            let keys = Object.keys(bookmarksData).filter(k => !ignoredKeys.includes(k));
-            const groups = {};
-            
-            keys.forEach(key => {
-                if (!key.includes(' / ')) {
-                    groups[key] = { root: key, children: [] };
-                }
-            });
-            
-            keys.forEach(key => {
-                if (key.includes(' / ')) {
-                    const parts = key.split(' / ');
-                    const root = parts[0];
-                    if (groups[root]) {
-                        groups[root].children.push(key);
-                    } else {
-                        groups[key] = { root: key, children: [] };
-                    }
-                }
-            });
-
-            const sortedRoots = keys.filter(k => !k.includes(' / '));
-
-            sortedRoots.forEach(rootKey => {
-                const groupData = groups[rootKey];
-                if(!groupData) return;
-
-                const groupDiv = document.createElement('div');
-                groupDiv.className = 'cat-group';
-                groupDiv.setAttribute('data-root-key', rootKey);
-
-                groupDiv.appendChild(createCategoryItem(rootKey, false));
-
-                const subContainer = document.createElement('div');
-                subContainer.className = 'sub-cat-container';
-                
-                groupData.children.forEach(childKey => {
-                    subContainer.appendChild(createCategoryItem(childKey, true));
-                });
-
-                groupDiv.appendChild(subContainer);
-                container.appendChild(groupDiv);
-
-                const subSort = Sortable.create(subContainer, {
-                    group: 'nested-subs',
-                    animation: 150,
-                    fallbackOnBody: true,
-                    swapThreshold: 0.65,
-                    ghostClass: 'sortable-ghost',
-                    onEnd: function(evt) { handleDragEnd(); } 
-                });
-                subSortables.push(subSort);
-            });
-
-            catSortable = Sortable.create(container, {
-                animation: 150,
-                draggable: '.cat-group', 
-                handle: '.menu-item',
-                ghostClass: 'sortable-ghost',
-                onEnd: function (evt) { handleDragEnd(); }
-            });
-        }
-
-        function createCategoryItem(key, isSub) {
-            const displayName = key.split(' / ').pop();
-            const item = document.createElement('div');
-            item.className = `menu-item ${currentCategory === key ? 'active' : ''} ${isSub ? 'sub-item' : ''}`;
-            item.setAttribute('data-id', key);
-            
-            const levelBtn = isSub 
-                ? `<button class="mini-btn move" data-action="level-up" data-cat="${key}" title="设为主分类">←</button>`
-                : `<button class="mini-btn move" data-action="level-down" data-cat="${key}" title="设为子分类">→</button>`;
-
-            item.innerHTML = `
-                <svg class="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                <span class="menu-text" title="${key}">${displayName}</span>
-                <div class="menu-actions">
-                    ${levelBtn}
-                    <button class="mini-btn edit" data-action="edit" data-cat="${key}" title="重命名">✎</button>
-                    <button class="mini-btn del" data-action="delete" data-cat="${key}" title="删除">×</button>
-                </div>
-            `;
-            return item;
-        }
-
-        async function handleDragEnd() {
-            const newOrder = {};
-            const container = document.getElementById('catListContainer');
-            
-            container.querySelectorAll('.cat-group').forEach(group => {
-                const rootItem = group.querySelector('.menu-item:not(.sub-item)');
-                if(!rootItem) return;
-
-                const rootKey = rootItem.getAttribute('data-id');
-                if (bookmarksData[rootKey]) {
-                    newOrder[rootKey] = bookmarksData[rootKey];
-                }
-
-                const subItems = group.querySelectorAll('.sub-cat-container .menu-item');
-                subItems.forEach(subItem => {
-                    const oldSubKey = subItem.getAttribute('data-id');
-                    const simpleName = oldSubKey.split(' / ').pop();
-                    
-                    const newSubKey = `${rootKey} / ${simpleName}`;
-                    
-                    if (oldSubKey !== newSubKey && bookmarksData[oldSubKey]) {
-                         bookmarksData[newSubKey] = bookmarksData[oldSubKey];
-                         subItem.setAttribute('data-id', newSubKey);
-                         subItem.querySelectorAll('[data-cat]').forEach(btn => btn.setAttribute('data-cat', newSubKey));
-                    }
-                    
-                    if(bookmarksData[newSubKey] || bookmarksData[oldSubKey]) {
-                        newOrder[newSubKey] = bookmarksData[newSubKey] || bookmarksData[oldSubKey];
-                    }
-                });
-            });
-            
-            ignoredKeys.forEach(k => { if(bookmarksData[k]) newOrder[k] = bookmarksData[k]; });
-            
-            bookmarksData = newOrder;
-            debouncedSync();
-        }
-
-        async function changeLevel(key, direction) {
-            const simpleName = key.split(' / ').pop();
-            let newKey = '';
-
-            if (direction === 'up') {
-                newKey = simpleName;
-            } else {
-                const keys = Object.keys(bookmarksData).filter(k => !ignoredKeys.includes(k));
-                const currentIndex = keys.indexOf(key);
-                if (currentIndex <= 0) return showToast('已经是第一个，无法降级');
-                
-                const prevKey = keys[currentIndex - 1];
-                const parentRoot = prevKey.split(' / ')[0];
-                newKey = `${parentRoot} / ${simpleName}`;
-            }
-
-            if (bookmarksData[newKey]) return showToast('目标层级已存在同名分类');
-
-            const newOrder = {};
-            Object.keys(bookmarksData).forEach(k => {
-                if (k === key) {
-                    newOrder[newKey] = bookmarksData[k];
-                } else if (k.startsWith(key + ' / ')) {
-                    newOrder[k] = bookmarksData[k];
-                } else {
-                    newOrder[k] = bookmarksData[k];
-                }
-            });
-
-            bookmarksData = newOrder;
-            if (currentCategory === key) currentCategory = newKey;
-            
-            renderUI();
-            await syncToServer();
-        }
-
-        async function renameCategory(oldName) {
-            const simpleName = oldName.split(' / ').pop();
-            const newSimpleName = prompt('重命名:', simpleName);
-            if (!newSimpleName || newSimpleName === simpleName) return;
-            
-            let newName = newSimpleName;
-            if (oldName.includes(' / ')) {
-                const parent = oldName.split(' / ')[0];
-                newName = `${parent} / ${newSimpleName}`;
-            }
-
-            if (bookmarksData[newName]) return alert('分类名已存在');
-
-            const newOrder = {};
-            Object.keys(bookmarksData).forEach(key => {
-                if (key === oldName) {
-                    newOrder[newName] = bookmarksData[key];
-                } else {
-                    newOrder[key] = bookmarksData[key];
-                }
-            });
-
-            bookmarksData = newOrder;
-            if (currentCategory === oldName) currentCategory = newName;
-            
-            renderUI();
-            await syncToServer();
-        }
-
-        async function addCategory() {
-            const name = document.getElementById('newCatName').value.trim();
-            if (!name) return showToast('请输入分类名称');
-            if (bookmarksData[name]) return showToast('分类已存在');
-            
-            bookmarksData[name] = [];
-            document.getElementById('newCatName').value = '';
-            currentCategory = name;
-            switchView('bookmarks');
-            
-            renderUI();
-            await syncToServer();
-        }
-
-        async function deleteCategory(cat) {
-            const count = bookmarksData[cat] ? bookmarksData[cat].length : 0;
-            const hasSub = Object.keys(bookmarksData).some(k => k.startsWith(cat + ' / '));
-            
-            let msg = `删除【${cat}】？`;
-            if (hasSub) msg += `\n注意：这将同时删除其下所有子分类！`;
-            else if (count > 0) msg += `\n该分类下有 ${count} 个书签。`;
-            
-            if (!confirm(msg)) return;
-            
-            const newOrder = {};
-            Object.keys(bookmarksData).forEach(key => {
-                if (key === cat || key.startsWith(cat + ' / ')) {
-                    // Skip
-                } else {
-                    newOrder[key] = bookmarksData[key];
-                }
-            });
-            bookmarksData = newOrder;
-
-            const cats = Object.keys(bookmarksData).filter(k => !ignoredKeys.includes(k));
-            currentCategory = cats.length > 0 ? cats[0] : 'all';
-            renderUI();
-            await syncToServer();
-        }
-
-        function switchView(viewName) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            
-            if(viewName === 'bookmarks') {
-                document.getElementById('view-bookmarks').classList.add('active');
-                document.getElementById('menu-bookmarks').classList.add('active');
-                document.getElementById('pageTitle').innerText = currentCategory === 'all' ? '书签管理 (总览)' : currentCategory;
-            } else if (viewName === 'wallpaper') {
-                document.getElementById('view-wallpaper').classList.add('active');
-                document.getElementById('menu-wallpaper').classList.add('active');
-                document.getElementById('pageTitle').innerText = '壁纸与主题设置';
-                updateThemeUI(bookmarksData.settings?.theme || 'auto');
-            } else if (viewName === 'settings') {
-                document.getElementById('view-settings').classList.add('active');
-                document.getElementById('menu-settings').classList.add('active');
-                document.getElementById('pageTitle').innerText = '系统设置';
-            }
-            if(window.innerWidth <= 900) toggleSidebar(); 
-        }
-
-        function handleMenuClick(type, el) {
-            if (type === 'bookmarks') {
-                filterBookmarks('all'); 
-                switchView('bookmarks');
-            } else if (type === 'wallpaper') {
-                switchView('wallpaper');
-            } else if (type === 'profile') {
-                // 打开系统设置
-                switchView('settings');
-                // 填充当前标题
-                const currentTitle = (bookmarksData.settings && bookmarksData.settings.siteTitle) ? bookmarksData.settings.siteTitle : '';
-                document.getElementById('sys-site-title').value = currentTitle;
-            }
-        }
-
-        async function setTheme(mode) {
-            if (!bookmarksData.settings) bookmarksData.settings = {};
-            bookmarksData.settings.theme = mode;
-            updateThemeUI(mode);
-            applyTheme(mode);
-            await syncToServer(false);
-            showToast('主题设置已保存');
-        }
-
-        // 修改后的 saveSystemSettings 函数
-        async function saveSystemSettings() {
-            const titleInput = document.getElementById('sys-site-title');
-            const newTitle = titleInput.value.trim();
-
-            if (!bookmarksData.settings) bookmarksData.settings = {};
-            
-            // 1. 更新数据
-            bookmarksData.settings.siteTitle = newTitle;
-            
-            // 2. 更新侧边栏 Logo 文本 (修复用户问题)
-            const sidebarLogoText = document.querySelector('.sidebar-header .logo-text');
-            const baseTitle = newTitle || 'Node Nav';
-            if (sidebarLogoText) {
-                sidebarLogoText.innerText = baseTitle;
-            }
-
-            // 3. 更新浏览器标签页标题
-            document.title = baseTitle + ' - 管理';
-
-            // 4. 同步到服务器并显示 Toast
-            await syncToServer(false); 
-            showToast('系统设置已保存');
-        }
-
-        function updateThemeUI(mode) {
-            document.querySelectorAll('.theme-option-wrapper').forEach(el => el.classList.remove('active'));
-            const target = document.getElementById(`theme-opt-${mode}`);
-            if (target) target.classList.add('active');
-        }
-
-        function applyTheme(mode) {
-            let isDark = false;
-            if (mode === 'auto') {
-                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) isDark = true;
-            } else if (mode === 'dark') isDark = true;
-            if (isDark) document.body.classList.add('dark-mode');
-            else document.body.classList.remove('dark-mode');
-        }
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toastMsg').innerText = msg;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2000);
-        }
-
-        function debouncedSync() {
-            const btn = document.getElementById('btnSaveAction');
-            const originalText = btn ? btn.innerText : "保存";
-            if(btn && !editMode) btn.innerText = "⏳ 自动保存中...";
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(async () => {
-                await syncToServer(false);
-                if(btn && !editMode) btn.innerText = originalText;
-            }, 1000); 
-        }
-
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('active');
-            document.querySelector('.sidebar-overlay').classList.toggle('active');
-        }
-
-        async function loadData() {
-            const loader = document.getElementById('global-loader');
-            try {
-                const res = await fetch('/api/bookmarks');
-                const data = await res.json();
-                bookmarksData = data.error ? { "常用": [] } : data;
-                
-                if (!bookmarksData.settings) bookmarksData.settings = { theme: 'auto' };
-                applyTheme(bookmarksData.settings.theme);
-
-                // 在加载时也应用标题到侧边栏和浏览器标题
-                const currentSiteTitle = (bookmarksData.settings && bookmarksData.settings.siteTitle) ? bookmarksData.settings.siteTitle : 'Node Nav';
-                document.title = currentSiteTitle + ' - 管理';
-                const sidebarLogoText = document.querySelector('.sidebar-header .logo-text');
-                if (sidebarLogoText) {
-                    sidebarLogoText.innerText = currentSiteTitle;
-                }
-
-                const cats = Object.keys(bookmarksData).filter(k => !ignoredKeys.includes(k));
-                if (!currentCategory || !bookmarksData[currentCategory]) {
-                     currentCategory = cats.length > 0 ? cats[0] : 'all';
-                }
-                
-                renderUI();
-            } catch(e) { 
-                console.error(e); 
-                showToast('数据加载失败'); 
-            } finally {
-                setTimeout(() => { if(loader) loader.classList.add('hidden'); }, 300);
-            }
-        }
-
-        function renderUI() {
-            requestAnimationFrame(() => {
-                renderCategories();
-                renderGrid();
-                updateSelectOptions();
-                
-                if (document.getElementById('view-bookmarks').classList.contains('active')) {
-                    const isAll = (currentCategory === 'all');
-                    document.getElementById('pageTitle').innerText = isAll ? '书签管理 (总览)' : currentCategory;
-                    document.getElementById('sortTip').style.display = isAll ? 'flex' : 'none';
-
-                    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-                    if(isAll) {
-                        document.getElementById('menu-bookmarks').classList.add('active');
-                    } else {
-                        const activeEl = document.querySelector(`.menu-item[data-id="${currentCategory}"]`);
-                        if(activeEl) activeEl.classList.add('active');
-                    }
-                }
-            });
-        }
-
-        async function syncToServer(showSuccessToast = true) {
-            try {
-                const res = await fetch('/api/bookmarks', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ password: token, bookmarksData: bookmarksData })
-                });
-                const data = await res.json();
-                if(!data.success) {
-                    showToast('保存失败: ' + data.message);
-                } else if(showSuccessToast) {
-                    showToast('已保存');
-                }
-            } catch(e) { showToast('网络错误'); }
-        }
-
-        function renderGrid() {
-            const grid = document.getElementById('bookmarkGrid');
-            const fragment = document.createDocumentFragment();
-            const canSort = (currentCategory !== 'all');
-            let hasItems = false;
-            
-            const appendCards = (items, catName) => {
-                if(items && items.length > 0) {
-                    hasItems = true;
-                    items.forEach((item, index) => {
-                        const card = createCard(item.name, item.url, item.icon, catName, index);
-                        fragment.appendChild(card);
-                    });
-                }
-            };
-
-            if (canSort) appendCards(bookmarksData[currentCategory], currentCategory);
-            else Object.entries(bookmarksData).forEach(([cat, items]) => { if (!ignoredKeys.includes(cat)) appendCards(items, cat); });
-
-            grid.innerHTML = '';
-            if (!hasItems) grid.innerHTML = `<div class="empty-state">暂无书签，快去添加一个吧！</div>`;
-            else grid.appendChild(fragment);
-
-            if (canSort && hasItems) {
-                if(bmSortable) bmSortable.destroy();
-                if (typeof Sortable !== 'undefined') {
-                    bmSortable = Sortable.create(grid, {
-                        animation: 200,
-                        ghostClass: 'sortable-ghost',
-                        dragClass: 'sortable-drag',
-                        delay: 0, forceFallback: true, fallbackOnBody: true, swapThreshold: 0.65,
-                        onEnd: function (evt) {
-                            const arr = bookmarksData[currentCategory];
-                            const item = arr.splice(evt.oldIndex, 1)[0];
-                            arr.splice(evt.newIndex, 0, item);
-                            debouncedSync();
-                        }
-                    });
-                }
-            } else { if(bmSortable) { bmSortable.destroy(); bmSortable = null; } }
-        }
-
-        function createCard(name, url, icon, cat, index) {
-            const card = document.createElement('div');
-            card.className = 'bm-card';
-            
-            const hasIcon = icon && icon.trim() !== '';
-            const imgStyle = hasIcon ? '' : 'display:none';
-            const svgStyle = hasIcon ? 'display:none' : 'display:block';
-            
-            card.innerHTML = `
-                <div class="bm-icon-box">
-                    <img src="${hasIcon ? icon : ''}" class="bm-icon" loading="lazy" 
-                         style="${imgStyle}"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-                    <div style="${svgStyle}; width:100%; height:100%;">${defaultIconSvg}</div>
-                </div>
-                <div class="bm-title" title="${name}">${name}</div>
-                <div class="bm-actions">
-                    <button class="bm-btn bm-btn-edit" data-action="edit" data-cat="${cat}" data-index="${index}">编辑</button>
-                    <button class="bm-btn bm-btn-del" data-action="delete" data-cat="${cat}" data-index="${index}">删除</button>
-                </div>
-            `;
-            return card;
-        }
-
-        function filterBookmarks(cat) { 
-            currentCategory = cat; 
-            switchView('bookmarks'); 
-            renderUI(); 
-        }
-        
-        function updateSelectOptions() {
-            const select = document.getElementById('inpCat');
-            const currentVal = select.value; 
-            select.innerHTML = '';
-            Object.keys(bookmarksData).forEach(cat => {
-                if (ignoredKeys.includes(cat)) return;
-                const opt = document.createElement('option');
-                opt.value = cat; opt.innerText = cat;
-                select.appendChild(opt);
-            });
-            if(editMode) select.value = currentVal;
-            else if(currentCategory !== 'all' && bookmarksData[currentCategory]) select.value = currentCategory;
-        }
-
-        function autoParseUrl() {
-            const urlInput = document.getElementById('inpUrl');
-            const iconInput = document.getElementById('inpIcon');
-            const nameInput = document.getElementById('inpName');
-            let url = urlInput.value.trim();
-            if (!url) return;
-            if (!/^https?:\/\//i.test(url)) { url = 'https://' + url; urlInput.value = url; }
-            if (!iconInput.value || iconInput.value.includes('google.com/s2/favicons')) {
-                try {
-                    const domain = new URL(url).hostname;
-                    iconInput.value = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-                    if(!nameInput.value) {
-                         const parts = domain.split('.');
-                         if(parts.length >= 2) nameInput.value = parts[parts.length - 2].charAt(0).toUpperCase() + parts[parts.length - 2].slice(1);
-                    }
-                } catch (e) {}
-            }
-        }
-
-        async function addOrUpdateBookmark() {
-            const name = document.getElementById('inpName').value.trim();
-            let url = document.getElementById('inpUrl').value.trim();
-            const icon = document.getElementById('inpIcon').value.trim();
-            const cat = document.getElementById('inpCat').value;
-
-            if (!name || !url || !cat) return showToast('请填写完整');
-            if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-
-            const targetList = bookmarksData[cat] || [];
-            const isDuplicate = targetList.some((item, index) => {
-                if (editMode && cat === editTargetCat && index === editTargetIndex) return false;
-                return item.url === url;
-            });
-
-            if (isDuplicate) {
-                showToast(`【${cat}】分类下已存在此网址！`);
-                return; 
-            }
-
-            if (editMode && bookmarksData[editTargetCat]) {
-                bookmarksData[editTargetCat].splice(editTargetIndex, 1);
-            }
-
-            if(!bookmarksData[cat]) bookmarksData[cat] = [];
-            bookmarksData[cat].push({ name, url, icon });
-
-            const btn = document.getElementById('btnSaveAction');
-            const originalText = btn.innerText;
-            btn.disabled = true; btn.innerText = "⏳ 处理中...";
-            
-            await syncToServer();
-            
-            resetForm(); 
-            renderUI();
-            btn.disabled = false; btn.innerText = originalText;
-        }
-
-        function editBookmark(cat, index) {
-            const item = bookmarksData[cat][index];
-            document.getElementById('inpName').value = item.name;
-            document.getElementById('inpUrl').value = item.url;
-            document.getElementById('inpIcon').value = item.icon || '';
-            document.getElementById('inpCat').value = cat;
-            editMode = true; editTargetCat = cat; editTargetIndex = index;
-            const saveBtn = document.getElementById('btnSaveAction');
-            saveBtn.innerText = "更新并保存"; saveBtn.style.backgroundColor = "#ed8936";
-            document.getElementById('btnCancelEdit').style.display = "inline-block";
-            switchView('bookmarks');
-        }
-
-        async function deleteBookmark(cat, index) {
-            if(!confirm('删除书签？')) return;
-            bookmarksData[cat].splice(index, 1);
-            renderUI(); await syncToServer();
-        }
-
-        function resetForm() {
-            document.getElementById('inpName').value = ''; document.getElementById('inpUrl').value = ''; document.getElementById('inpIcon').value = '';
-            editMode = false; editTargetCat = ''; editTargetIndex = -1;
-            const saveBtn = document.getElementById('btnSaveAction');
-            saveBtn.innerText = "保存书签"; saveBtn.style.backgroundColor = "";
-            document.getElementById('btnCancelEdit').style.display = "none";
-            if(currentCategory !== 'all' && bookmarksData[currentCategory]) document.getElementById('inpCat').value = currentCategory;
-        }
-
-        function logout() {
-            if(confirm('退出登录？')) { sessionStorage.removeItem('auth_token'); window.location.href = '/login'; }
-        }
-    </script>
 </body>
 </html>

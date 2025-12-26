@@ -1,147 +1,274 @@
-/* ================= 登录页样式 (Login) ================= */
+/* --- 1. 变量定义 --- */
 :root {
-    --primary-color: #0088cc;
-    --bg-color: #f4f6f9;
-    --error-color: #dc3545; 
+    --primary-color: #3182ce;
+    --primary-hover: #2b6cb0;
+    --primary-rgb: 49, 130, 206; 
+    --bg-color: #f7fafc;
+    --text-color: #2d3748;
+    --text-secondary: #4a5568;
+    --card-bg: #ffffff;
+    
+    --border-color: #e2e8f0;
+    --error-color: #e53e3e;
+    --glass-blur: 2px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background-color: var(--bg-color);
+    color: var(--text-color);
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    transition: background-color 0.3s; /* 添加过渡 */
+    transition: background-color 0.3s, color 0.3s, background-image 0.3s;
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    -webkit-font-smoothing: antialiased;
 }
 
+input, button { font-family: inherit; }
+
+/* ================= 卡片主体 ================= */
 .login-card {
-    background: white;
-    padding: 30px 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    width: 100%;
-    max-width: 320px;
+    background: var(--card-bg);
+    padding: 40px 35px;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    width: 380px;
+    max-width: 90%;
     text-align: center;
-    transition: background-color 0.3s;
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
 }
 
 .login-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 20px;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-color);
+    margin-bottom: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 10px;
 }
+.login-title span { color: var(--primary-color); }
 
+/* ================= 表单元素 ================= */
 .form-input {
     width: 100%;
-    padding: 10px 12px;
-    margin-bottom: 10px; 
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 0.9rem;
+    padding: 12px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    background-color: rgba(0,0,0,0.02);
+    font-size: 1rem;
+    color: var(--text-color);
+    margin-bottom: 15px;
     outline: none;
     transition: all 0.2s;
-    background-color: #fafafa;
+    text-align: left; 
 }
 
 .form-input:focus {
-    border-color: var(--primary-color);
     background-color: #fff;
-    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
 }
+.form-input::placeholder { color: #a0aec0; }
 
-/* 错误状态样式 */
 .form-input.error {
-    border-color: var(--error-color);
-    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.1);
-    animation: shake 0.4s ease-in-out; 
+    border-color: var(--error-color) !important;
+    animation: shake 0.4s ease-in-out;
 }
 
-/* 错误提示文字 */
 .error-message {
-    height: 20px; 
-    font-size: 0.8rem;
     color: var(--error-color);
-    margin-bottom: 10px;
+    font-size: 14px;
+    height: 0;
     opacity: 0;
-    transition: opacity 0.2s;
+    margin-bottom: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    text-align: center;
 }
-.error-message.show { opacity: 1; }
+.error-message.show { height: auto; margin-bottom: 15px; opacity: 1; }
 
-.btn-submit {
-    width: 100%;
-    background-color: var(--primary-color);
-    color: white;
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: opacity 0.2s, background-color 0.2s;
-    font-weight: 500;
+.form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    gap: 8px; 
 }
 
-.btn-submit:hover { opacity: 0.9; }
-
-.btn-submit:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
+/* 返回按钮 (次级操作) */
 .back-link {
-    display: block;
-    margin-top: 15px;
-    color: #888;
+    font-size: 14px;
+    color: var(--text-secondary);
     text-decoration: none;
-    font-size: 0.85rem;
-    transition: color 0.2s;
+    padding: 10px 24px;
+    border-radius: 50px;
+    background-color: rgba(0,0,0,0.04);
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+}
+.back-link:hover { 
+    background-color: rgba(0,0,0,0.08); 
+    color: var(--text-color); 
+    transform: translateY(-1px);
 }
 
-.back-link:hover { color: var(--primary-color); }
+/* 登录按钮 (主要操作 - 默认状态) */
+.btn-submit {
+    padding: 10px 32px;
+    background-color: var(--primary-color);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    display: inline-flex; 
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1.5;
+}
+.btn-submit:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+}
 
+/* ================= 核心统一：壁纸模式 (Wallpaper Mode) ================= */
+
+/* 1. 浅色壁纸 (White Glass) */
+body.has-bg .login-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: saturate(120%) blur(var(--glass-blur));
+    -webkit-backdrop-filter: saturate(120%) blur(var(--glass-blur));
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* 壁纸模式强制文字白色 */
+body.has-bg .login-title { color: #ffffff !important; text-shadow: none; }
+
+/* 壁纸模式输入框透明化 */
+body.has-bg .form-input {
+    background-color: rgba(255, 255, 255, 0.2); /* 透明玻璃 */
+    backdrop-filter: blur(5px);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #ffffff !important;
+}
+body.has-bg .form-input::placeholder { color: rgba(255, 255, 255, 0.7); }
+body.has-bg .form-input:focus {
+    background-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+    border-color: #ffffff;
+}
+
+/* 壁纸模式：返回按钮 */
+body.has-bg .back-link {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+body.has-bg .back-link:hover { background-color: rgba(255, 255, 255, 0.35); }
+
+/* 🔥 核心修改：壁纸模式登录按钮去实白，改用半透明主色调 */
+body.has-bg .btn-submit {
+    /* 使用半透明的主色调背景 */
+    background-color: rgba(var(--primary-rgb), 0.75);
+    /* 增加磨砂感 */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    color: #ffffff;
+    /* 加一个微弱的边框增强层次感 */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+body.has-bg .btn-submit:hover {
+    /* 悬停时颜色加深，变得更实 */
+    background-color: rgba(var(--primary-rgb), 0.9);
+    box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.4);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 2. 深色壁纸 (Dark Glass - 对齐 Admin) */
+body.has-bg.dark-mode .login-card {
+    background: rgba(20, 20, 20, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* 深色壁纸输入框 */
+body.has-bg.dark-mode .form-input {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff !important;
+}
+body.has-bg.dark-mode .form-input::placeholder { color: rgba(255, 255, 255, 0.6); }
+body.has-bg.dark-mode .form-input:focus {
+    background-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+/* 深色壁纸按钮 */
+body.has-bg.dark-mode .back-link { background-color: rgba(255, 255, 255, 0.1); }
+body.has-bg.dark-mode .back-link:hover { background-color: rgba(255, 255, 255, 0.2); }
+
+/* ================= 深色模式适配 (Admin Dark - 无壁纸) ================= */
+body.dark-mode { 
+    background-color: #121212; 
+    color: #e0e0e0;
+}
+
+body.dark-mode .login-card {
+    background-color: #1e1e1e; 
+    border-color: #333;
+}
+body.dark-mode .login-title { color: #e0e0e0; }
+
+body.dark-mode .form-input {
+    background-color: rgba(255,255,255,0.05);
+    border-color: #333;
+    color: #fff;
+}
+body.dark-mode .form-input:focus {
+    border-color: var(--primary-color);
+    background-color: rgba(255,255,255,0.1);
+}
+
+body.dark-mode .back-link {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #a0a0a0;
+}
+body.dark-mode .back-link:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+/* 防止自动填充背景变色 */
+input:-webkit-autofill {
+    transition: background-color 5000s ease-in-out 0s;
+    -webkit-text-fill-color: var(--text-color) !important;
+}
+body.dark-mode input:-webkit-autofill {
+    -webkit-text-fill-color: #fff !important;
+}
+
+/* 震动动画 */
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-5px); }
     50% { transform: translateX(5px); }
     75% { transform: translateX(-5px); }
 }
-
-/* --- Loader --- */
-#global-loader {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: #f4f6f9; /* 默认浅色 */
-    z-index: 9999; display: flex; justify-content: center; align-items: center;
-    transition: opacity 0.4s ease-out, visibility 0.4s;
-}
-#global-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-.loader-spinner {
-    width: 35px; height: 35px;
-    border: 3px solid #ddd;
-    border-top: 3px solid #0088cc;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-/* ================= 深色模式 (Dark Mode) ================= */
-body.dark-mode { background-color: #171923; }
-body.dark-mode .login-card { background-color: #1a202c; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-body.dark-mode .login-title { color: #fff; }
-
-body.dark-mode .form-input { background-color: #2d3748; border-color: #4a5568; color: #fff; }
-body.dark-mode .form-input:focus { border-color: #0088cc; background-color: #2d3748; }
-
-body.dark-mode .back-link { color: #a0aec0; }
-body.dark-mode .back-link:hover { color: #fff; }
-
-/* Loader 深色适配 */
-body.dark-mode #global-loader { background-color: #171923; }
-body.dark-mode .loader-spinner { border-color: #2d3748; border-top-color: #0088cc; }
