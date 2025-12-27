@@ -47,7 +47,7 @@
 | `NEZHA_KEY` | 空 | 否 | 哪吒v1的NZ_CLIENT_SECRET;哪吒v0的agent密钥 |
 | `ADMIN_PASSWORD` | `123456` | 修改 | 后台登录密码 |
 
-容器平台 Docker 镜像：ghcr.io/llodys/node-nav:latest
+安装：npm install  容器平台 Docker 镜像：ghcr.io/llodys/node-nav:latest
 
 ---
 
