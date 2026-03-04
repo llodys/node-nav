@@ -9,32 +9,49 @@ const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 const { execSync } = require('child_process');
 
-// 环境变量配置
-const UPLOAD_URL = process.env.UPLOAD_URL || '';      // 节点或订阅自动上传地址,需填写部署Merge-sub项目后的首页地址,例如：https://merge.xxx.com
-const PROJECT_URL = process.env.PROJECT_URL || '';    // 需要上传订阅或保活时需填写项目分配的url,例如：https://google.com
-const AUTO_ACCESS = process.env.AUTO_ACCESS || false; // false关闭自动保活，true开启,需同时填写PROJECT_URL变量
-const FILE_PATH = process.env.FILE_PATH || './data';   // 运行目录,sub节点文件保存目录
-const SUB_PATH = process.env.SUB_PATH || 'sub';       // 订阅路径
-const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;        // http服务订阅端口
-const UUID = process.env.UUID || 'beaf3a9f-b586-4bf3-a570-3103a020d72b'; // 使用哪吒v1,在不同的平台运行需修改UUID,否则会覆盖
-const NEZHA_SERVER = process.env.NEZHA_SERVER || '';        // 哪吒v1填写形式: nz.abc.com:8008  哪吒v0填写形式：nz.abc.com
-const NEZHA_PORT = process.env.NEZHA_PORT || '';            // 使用哪吒v1请留空，哪吒v0需填写
-const NEZHA_KEY = process.env.NEZHA_KEY || '';              // 哪吒v1的NZ_CLIENT_SECRET或哪吒v0的agent密钥
-const ARGO_DOMAIN = process.env.ARGO_DOMAIN || '';          // 固定隧道域名,留空即启用临时隧道
-const ARGO_AUTH = process.env.ARGO_AUTH || '';              // 固定隧道密钥json或token,留空即启用临时隧道,json获取地址：https://json.zone.id
-const ARGO_PORT = process.env.ARGO_PORT || 8001;            // 固定隧道端口,使用token需在cloudflare后台设置和这里一致
-const CFIP = process.env.CFIP || 'cdns.doon.eu.org';        // 节点优选域名或优选ip  
-const CFPORT = process.env.CFPORT || 443;                   // 节点优选域名或优选ip对应的端口
-const NAME = process.env.NAME || '';                        // 节点名称
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "123456";    // 书签后台管理密码：https://域名或IP:服务订阅端口/admin
+const UPLOAD_URL = process.env.UPLOAD_URL || '';            // 订阅节点自动上传的外部 API 地址（选填，用于统一管理多台机器的节点）
+const PROJECT_URL = process.env.PROJECT_URL || '';          // 当前项目运行的公网 URL，用于保活任务或拼接订阅路径（选填）
+const AUTO_ACCESS = process.env.AUTO_ACCESS || false;       // 是否开启自带的访问保活任务（true/false），防止云平台休眠
+const FILE_PATH = process.env.FILE_PATH || './data';        // 核心运行文件和配置文件的临时存放目录，通常不需要改
+const SUB_PATH = process.env.SUB_PATH || 'sub';             // 订阅链接的路径，例如填 'sub'，你的订阅地址就是 域名/sub
+const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;  // Web 伪装服务和内部主代理监听的本地端口
+const UUID = process.env.UUID || 'beaf3a9f-b586-4bf3-a570-3103a020d72b'; // 核心用户的 UUID，也是绝大多数协议默认的连接密码
+const NEZHA_SERVER = process.env.NEZHA_SERVER || '';        // 哪吒探针的服务端地址（选填，例如：nezha.example.com:5555）
+const NEZHA_PORT = process.env.NEZHA_PORT || '';            // 哪吒探针的服务端端口（选填，配合上面的地址使用）
+const NEZHA_KEY = process.env.NEZHA_KEY || '';              // 哪吒探针的客户端授权密钥（选填）
+const ARGO_DOMAIN = process.env.ARGO_DOMAIN || '';          // Cloudflare Argo 隧道的固定域名（选填，不填则自动抓取临时域名）
+const ARGO_AUTH = process.env.ARGO_AUTH || '';              // Cloudflare Argo 隧道的 Token 或 TunnelSecret（选填）
+const ARGO_PORT = process.env.ARGO_PORT || 8001;            // Argo 隧道在本地转发的目标端口，一般不用改
+const CFIP = process.env.CFIP || 'cdns.doon.eu.org';        // Cloudflare 优选 IP 或域名，用于生成节点订阅链接时提高速度
+const CFPORT = process.env.CFPORT || 443;                   // Cloudflare 优选 IP 对应的端口，一般配合 TLS 使用 443
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "123456";  // Web 伪装页面（书签管理页面）的管理员登录密码
+
+const HY2_PORT = process.env.HY2_PORT || '';                // Hysteria2 协议监听的 UDP 端口（留空即代表不启动该协议）
+const HY2_PASSWORD = process.env.HY2_PASSWORD || UUID;      // Hysteria2 的连接密码，如果不填则默认使用上面的 UUID
+
+const SOCKS_PORT = process.env.SOCKS_PORT || '';            // SOCKS5 代理监听的 TCP 端口（留空即代表不启动）
+const SOCKS_USER = process.env.SOCKS_USER || 'admin';       // SOCKS5 代理的认证用户名
+const SOCKS_PASS = process.env.SOCKS_PASS || UUID;          // SOCKS5 代理的认证密码，如果不填则默认使用上面的 UUID
+
+const TUIC_PORT = process.env.TUIC_PORT || '';              // TUIC 协议监听的 UDP 端口（留空即代表不启动）
+const TUIC_PASSWORD = process.env.TUIC_PASSWORD || UUID;    // TUIC 的连接密码，如果不填则默认使用上面的 UUID
+
+const ANYTLS_PORT = process.env.ANYTLS_PORT || '';          // AnyTLS 协议监听的 TCP 端口（留空即代表不启动）
+const ANYTLS_PASSWORD = process.env.ANYTLS_PASSWORD || UUID; // AnyTLS 的连接密码，如果不填则默认使用上面的 UUID
+
+const REALITY_PORT = process.env.REALITY_PORT || '';        // VLESS-Reality 协议监听的 TCP 端口（留空即代表不启动）
+const REALITY_PRIVATE_KEY = process.env.REALITY_PRIVATE_KEY || ''; // Reality 的 x25519 私钥（仅留在服务端解密使用）
+const REALITY_PUBLIC_KEY = process.env.REALITY_PUBLIC_KEY || '';   // Reality 的 x25519 公钥（用于拼接在客户端的订阅节点中）
+const REALITY_SHORTID = process.env.REALITY_SHORTID || '';         // Reality 的 ShortId (短 ID)，额外的连接验证码（最长16位十六进制）
+const REALITY_DEST = process.env.REALITY_DEST || 'www.microsoft.com:443'; // Reality 伪装转发的真实目标网站
+const REALITY_SERVER_NAMES = process.env.REALITY_SERVER_NAMES || 'www.microsoft.com'; // Reality 伪装目标网站的 SNI，必须与 DEST 匹配
 
 const bookmarksPath = path.join(FILE_PATH, 'bookmarks.json');
-const defaultBookmarks = {}; // 默认空书签
+const defaultBookmarks = {}; 
 
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ================= [系统监控逻辑] =================
 let systemStatus = { cpu: 0, mem: 0, disk: 0, uptime: 0, load: 0, netIn: 0, netOut: 0 };
 
 function getCpuInfo() {
@@ -71,30 +88,25 @@ async function updateNetStats() {
             systemStatus.netOut = ((tx - lastNetStat.tx) / duration).toFixed(0);
         }
         lastNetStat = { rx, tx, time: now };
-    } catch (e) { /* Ignore */ }
+    } catch (e) {}
 }
 
 setInterval(async () => {
-    // 更新 CPU
     const currentCpuInfo = getCpuInfo();
     const totalDiff = currentCpuInfo.total - lastCpuInfo.total;
     const idleDiff = currentCpuInfo.idle - lastCpuInfo.idle;
     if (totalDiff > 0) systemStatus.cpu = ((1 - idleDiff / totalDiff) * 100).toFixed(0);
     lastCpuInfo = currentCpuInfo;
 
-    // 更新内存
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
     systemStatus.mem = (((totalMem - freeMem) / totalMem) * 100).toFixed(0);
 
-    // 更新系统负载和时间
     systemStatus.uptime = os.uptime();
     systemStatus.load = os.loadavg()[0].toFixed(2);
 
-    // 更新网络流量
     await updateNetStats();
 
-    // 更新硬盘 (仅限 Linux)
     if (process.platform === 'linux') {
         try { 
             const { stdout } = await exec("df -h / | tail -1 | awk '{print $5}'"); 
@@ -103,44 +115,26 @@ setInterval(async () => {
     }
 }, 2000);
 
-// 获取状态 API
 app.get('/api/status', (req, res) => { res.json(systemStatus); });
-// ================= [监控逻辑结束] =================
 
-
-// 初始化运行目录
 if (!fs.existsSync(FILE_PATH)) { fs.mkdirSync(FILE_PATH, { recursive: true }); console.log(`${FILE_PATH} is created`); } 
 else { console.log(`${FILE_PATH} already exists`); }
 
-
-// 1. 首页路由
 app.get("/", (req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
   if (fs.existsSync(indexPath)) res.sendFile(indexPath);
   else res.send("Welcome! Service is running. Please place index.html in the 'public' folder.");
 });
 
-// 2. 登录页路由 (新增)
-app.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
+app.get("/login", (req, res) => { res.sendFile(path.join(__dirname, 'public', 'login.html')); });
+app.get("/admin", (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 
-// 3. 后台页路由
-app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-// 4. 密码验证接口
 app.post("/check-password", (req, res) => {
   const { password } = req.body;
-  if (password === ADMIN_PASSWORD) {
-    res.json({ success: true });
-  } else {
-    res.json({ success: false });
-  }
+  if (password === ADMIN_PASSWORD) res.json({ success: true });
+  else res.json({ success: false });
 });
 
-// 5. 获取书签接口
 app.get('/api/bookmarks', (req, res) => {
   if (fs.existsSync(bookmarksPath)) {
     fs.readFile(bookmarksPath, 'utf8', (err, data) => {
@@ -155,7 +149,6 @@ app.get('/api/bookmarks', (req, res) => {
   }
 });
 
-// 6. 保存书签接口
 app.post('/api/bookmarks', (req, res) => {
   const { password, bookmarksData } = req.body;
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ success: false, message: 'Invalid password.' });
@@ -167,9 +160,6 @@ app.post('/api/bookmarks', (req, res) => {
   });
 });
 
-
-// ================= [核心业务逻辑] =================
-
 function generateRandomName() {
   const characters = 'abcdefghijklmnopqrstuvwxyz';
   let result = '';
@@ -179,10 +169,15 @@ function generateRandomName() {
   return result;
 }
 
+// 文件路径生成
 const npmName = generateRandomName();
 const webName = generateRandomName();
 const botName = generateRandomName();
 const phpName = generateRandomName();
+const hy2Name = generateRandomName(); 
+const tuicName = generateRandomName();
+const anytlsName = generateRandomName();
+
 let npmPath = path.join(FILE_PATH, npmName);
 let phpPath = path.join(FILE_PATH, phpName);
 let webPath = path.join(FILE_PATH, webName);
@@ -192,6 +187,17 @@ let listPath = path.join(FILE_PATH, 'list.txt');
 let bootLogPath = path.join(FILE_PATH, 'boot.log');
 let configPath = path.join(FILE_PATH, 'config.json');
 
+let hy2Path = path.join(FILE_PATH, hy2Name);
+let hy2ConfigPath = path.join(FILE_PATH, 'hy2_config.json');
+
+let tuicPath = path.join(FILE_PATH, tuicName);
+let tuicConfigPath = path.join(FILE_PATH, 'tuic_config.json');
+
+let anytlsPath = path.join(FILE_PATH, anytlsName);
+
+let certPath = path.join(FILE_PATH, 'server.crt');
+let keyPath = path.join(FILE_PATH, 'server.key');
+
 function deleteNodes() {
   try {
     if (!UPLOAD_URL) return;
@@ -199,7 +205,7 @@ function deleteNodes() {
     let fileContent;
     try { fileContent = fs.readFileSync(subPath, 'utf-8'); } catch { return null; }
     const decoded = Buffer.from(fileContent, 'base64').toString('utf-8');
-    const nodes = decoded.split('\n').filter(line => /(vless|vmess|trojan|hysteria2|tuic):\/\//.test(line));
+    const nodes = decoded.split('\n').filter(line => /(vless|vmess|trojan|hysteria2|tuic|anytls|socks):\/\//.test(line));
     if (nodes.length === 0) return;
     axios.post(`${UPLOAD_URL}/api/delete-nodes`, JSON.stringify({ nodes }), { headers: { 'Content-Type': 'application/json' } }).catch((error) => { return null; });
     return null;
@@ -234,6 +240,41 @@ async function generateConfig() {
     dns: { servers: ["https+local://8.8.8.8/dns-query"] },
     outbounds: [ { protocol: "freedom", tag: "direct" }, {protocol: "blackhole", tag: "block"} ]
   };
+
+  if (SOCKS_PORT) {
+    config.inbounds.push({
+      port: parseInt(SOCKS_PORT),
+      listen: "0.0.0.0", 
+      protocol: "socks",
+      settings: { auth: "password", accounts: [{ user: SOCKS_USER, pass: SOCKS_PASS }], udp: true }
+    });
+  }
+
+  // 注入 VLESS-Reality 节点
+  if (REALITY_PORT && REALITY_PRIVATE_KEY && REALITY_PUBLIC_KEY && REALITY_SHORTID) {
+    config.inbounds.push({
+      port: parseInt(REALITY_PORT),
+      listen: "0.0.0.0",
+      protocol: "vless",
+      settings: {
+        clients: [{ id: UUID, flow: "xtls-rprx-vision" }],
+        decryption: "none"
+      },
+      streamSettings: {
+        network: "tcp",
+        security: "reality",
+        realitySettings: {
+          show: false,
+          dest: REALITY_DEST,
+          xver: 0,
+          serverNames: REALITY_SERVER_NAMES.split(','),
+          privateKey: REALITY_PRIVATE_KEY,
+          shortIds: [REALITY_SHORTID]
+        }
+      }
+    });
+  }
+
   fs.writeFileSync(path.join(FILE_PATH, 'config.json'), JSON.stringify(config, null, 2));
 }
 
@@ -261,6 +302,27 @@ async function downloadFilesAndRun() {
     [{ fileName: webPath, fileUrl: "https://arm64.ssss.nyc.mn/web" }, { fileName: botPath, fileUrl: "https://arm64.ssss.nyc.mn/bot" }] : 
     [{ fileName: webPath, fileUrl: "https://amd64.ssss.nyc.mn/web" }, { fileName: botPath, fileUrl: "https://amd64.ssss.nyc.mn/bot" }];
 
+  if (HY2_PORT) {
+    const hy2Url = architecture === 'arm' ? 
+      "https://github.com/apernet/hysteria/releases/latest/download/hysteria-linux-arm64" : 
+      "https://github.com/apernet/hysteria/releases/latest/download/hysteria-linux-amd64";
+    filesToDownload.push({ fileName: hy2Path, fileUrl: hy2Url });
+  }
+
+  if (TUIC_PORT) {
+    const tuicUrl = architecture === 'arm' ? 
+      "https://github.com/EAimTY/tuic/releases/download/tuic-server-1.0.0/tuic-server-1.0.0-aarch64-unknown-linux-musl" : 
+      "https://github.com/EAimTY/tuic/releases/download/tuic-server-1.0.0/tuic-server-1.0.0-x86_64-unknown-linux-musl";
+    filesToDownload.push({ fileName: tuicPath, fileUrl: tuicUrl });
+  }
+
+  if (ANYTLS_PORT) {
+    const anytlsUrl = architecture === 'arm' ? 
+      "https://github.com/jxo-me/anytls-rs/releases/latest/download/anytls-rs-aarch64-unknown-linux-musl" : 
+      "https://github.com/jxo-me/anytls-rs/releases/latest/download/anytls-rs-x86_64-unknown-linux-musl";
+    filesToDownload.push({ fileName: anytlsPath, fileUrl: anytlsUrl });
+  }
+
   if (NEZHA_SERVER && NEZHA_KEY) {
     if (NEZHA_PORT) {
       filesToDownload.unshift({ fileName: npmPath, fileUrl: architecture === 'arm' ? "https://arm64.ssss.nyc.mn/agent" : "https://amd64.ssss.nyc.mn/agent" });
@@ -276,7 +338,55 @@ async function downloadFilesAndRun() {
   } catch (err) { console.error('Error downloading files:', err); return; }
   
   const filesToAuthorize = NEZHA_PORT ? [npmPath, webPath, botPath] : [phpPath, webPath, botPath];
+  if (HY2_PORT) filesToAuthorize.push(hy2Path);
+  if (TUIC_PORT) filesToAuthorize.push(tuicPath);
+  if (ANYTLS_PORT) filesToAuthorize.push(anytlsPath);
   filesToAuthorize.forEach(p => { if (fs.existsSync(p)) fs.chmod(p, 0o775, ()=>{}); });
+
+  // 共享生成自签证书
+  if ((HY2_PORT || TUIC_PORT || ANYTLS_PORT) && !fs.existsSync(certPath)) {
+    try {
+      await exec(`openssl req -x509 -nodes -newkey rsa:2048 -keyout ${keyPath} -out ${certPath} -days 3650 -subj "/CN=bing.com"`);
+    } catch (e) { console.error("Certificate generation failed:", e.message); }
+  }
+
+  if (HY2_PORT) {
+    try {
+      const hy2Config = {
+        listen: `:${HY2_PORT}`,
+        tls: { cert: certPath, key: keyPath },
+        auth: { type: "password", password: HY2_PASSWORD },
+        masquerade: { type: "proxy", proxy: { url: "https://bing.com", rewriteHost: true } }
+      };
+      fs.writeFileSync(hy2ConfigPath, JSON.stringify(hy2Config, null, 2));
+      await exec(`nohup ${hy2Path} server -c ${hy2ConfigPath} >/dev/null 2>&1 &`);
+      console.log(`Hysteria2 started on UDP port ${HY2_PORT}`);
+    } catch (e) { console.error(e.message); }
+  }
+
+  if (TUIC_PORT) {
+    try {
+      const tuicConfig = {
+        server: `[::]:${TUIC_PORT}`,
+        users: { [UUID]: TUIC_PASSWORD },
+        certificate: certPath,
+        private_key: keyPath,
+        congestion_control: "bbr",
+        alpn: ["h3", "spdy/3.1"],
+        udp_relay_ipv6: true
+      };
+      fs.writeFileSync(tuicConfigPath, JSON.stringify(tuicConfig, null, 2));
+      await exec(`nohup ${tuicPath} -c ${tuicConfigPath} >/dev/null 2>&1 &`);
+      console.log(`TUIC started on UDP port ${TUIC_PORT}`);
+    } catch (e) { console.error(e.message); }
+  }
+
+  if (ANYTLS_PORT) {
+    try {
+      await exec(`nohup ${anytlsPath} -l 0.0.0.0:${ANYTLS_PORT} -p ${ANYTLS_PASSWORD} --cert ${certPath} --key ${keyPath} >/dev/null 2>&1 &`);
+      console.log(`AnyTLS started on TCP port ${ANYTLS_PORT}`);
+    } catch (e) { console.error(e.message); }
+  }
 
   if (NEZHA_SERVER && NEZHA_KEY) {
     if (!NEZHA_PORT) {
@@ -334,12 +444,72 @@ async function extractDomains() {
   }
 
   async function generateLinks(d) {
-    const m = execSync('curl -sm 5 https://speed.cloudflare.com/meta | awk -F\\" \'{print $26"-"$18}\' | sed -e \'s/ /_/g\'', { encoding: 'utf-8' });
-    const n = NAME ? `${NAME}-${m.trim()}` : m.trim();
+    let cityName = 'UnknownCity';
+    let countryCode = 'UN'; 
+    
+    // 获取英文国家代码缩写和城市名称
+    try {
+      const geoRes = await axios.get('http://ip-api.com/json/?lang=en', { timeout: 3000 });
+      if (geoRes.data && geoRes.data.status === 'success') {
+        countryCode = geoRes.data.countryCode; // 获取两位字母的国家代码 (如 US, DE, SG)
+        cityName = geoRes.data.city;           // 获取城市名称 (如 Los Angeles, Frankfurt)
+      }
+    } catch (e) {
+      console.log('Failed to fetch geolocation');
+    }
+
+    // 核心前缀：国家缩写_城市名称 (例如: DE_Frankfurt)
+    const nodePrefix = `${countryCode}_${cityName}`;
+
+    let serverIP = CFIP; 
+    if (HY2_PORT || SOCKS_PORT || REALITY_PORT || TUIC_PORT || ANYTLS_PORT) {
+      try {
+        const ipRes = await axios.get('https://api.ipify.org?format=json', { timeout: 3000 });
+        if (ipRes.data.ip) serverIP = ipRes.data.ip;
+      } catch (e) {
+        console.log('Failed to fetch public IP, fallback to CFIP');
+      }
+    }
+
+    // 后续拼接统一为 ${nodePrefix}-协议名
+    let hy2Link = '';
+    if (HY2_PORT) {
+      hy2Link = `\nhysteria2://${HY2_PASSWORD}@${serverIP}:${HY2_PORT}/?insecure=1&sni=bing.com#${nodePrefix}-HY2`;
+    }
+
+    let realityLink = '';
+    if (REALITY_PORT && REALITY_PUBLIC_KEY && REALITY_SHORTID) {
+      const sni = REALITY_SERVER_NAMES.split(',')[0];
+      realityLink = `\nvless://${UUID}@${serverIP}:${REALITY_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${sni}&fp=chrome&pbk=${REALITY_PUBLIC_KEY}&sid=${REALITY_SHORTID}&type=tcp&headerType=none#${nodePrefix}-Reality`;
+    }
+
+    let tuicLink = '';
+    if (TUIC_PORT) {
+      tuicLink = `\ntuic://${UUID}:${TUIC_PASSWORD}@${serverIP}:${TUIC_PORT}/?sni=bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${nodePrefix}-TUIC`;
+    }
+
+    let anytlsLink = '';
+    if (ANYTLS_PORT) {
+      anytlsLink = `\nanytls://${ANYTLS_PASSWORD}@${serverIP}:${ANYTLS_PORT}/?sni=bing.com&allow_insecure=1#${nodePrefix}-AnyTLS`;
+    }
+
+    let socksLink = '';
+    if (SOCKS_PORT) {
+      const credentials = Buffer.from(`${SOCKS_USER}:${SOCKS_PASS}`).toString('base64');
+      socksLink = `\nsocks://${credentials}@${serverIP}:${SOCKS_PORT}#${nodePrefix}-SOCKS5`;
+    }
+
     return new Promise((r) => {
       setTimeout(() => {
-        const v = { v: '2', ps: `${n}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: d, path: '/vmess-argo?ed=2560', tls: 'tls', sni: d, alpn: '', fp: 'firefox'};
-        const s = `vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${d}&fp=firefox&type=ws&host=${d}&path=%2Fvless-argo%3Fed%3D2560#${n}\nvmess://${Buffer.from(JSON.stringify(v)).toString('base64')}\ntrojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${d}&fp=firefox&type=ws&host=${d}&path=%2Ftrojan-argo%3Fed%3D2560#${n}`;
+        // VMESS 的备注也更新为新格式
+        const v = { v: '2', ps: `${nodePrefix}-VMESS`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: d, path: '/vmess-argo?ed=2560', tls: 'tls', sni: d, alpn: '', fp: 'firefox'};
+        
+        const vlessLink = `vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${d}&fp=firefox&type=ws&host=${d}&path=%2Fvless-argo%3Fed%3D2560#${nodePrefix}-VLESS`;
+        const vmessLink = `vmess://${Buffer.from(JSON.stringify(v)).toString('base64')}`;
+        const trojanLink = `trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${d}&fp=firefox&type=ws&host=${d}&path=%2Ftrojan-argo%3Fed%3D2560#${nodePrefix}-Trojan`;
+        
+        const s = `${vlessLink}\n${vmessLink}\n${trojanLink}${hy2Link}${realityLink}${tuicLink}${anytlsLink}${socksLink}`;
+        
         fs.writeFileSync(subPath, Buffer.from(s).toString('base64'));
         uploadNodes();
         app.get(`/${SUB_PATH}`, (req, res) => { res.set('Content-Type', 'text/plain; charset=utf-8'); res.send(Buffer.from(s).toString('base64')); });
@@ -355,7 +525,7 @@ async function uploadNodes() {
   } else if (UPLOAD_URL) {
     if (!fs.existsSync(listPath)) return;
     const c = fs.readFileSync(listPath, 'utf-8');
-    const n = c.split('\n').filter(l => /(vless|vmess|trojan|hysteria2|tuic):\/\//.test(l));
+    const n = c.split('\n').filter(l => /(vless|vmess|trojan|hysteria2|tuic|anytls|socks):\/\//.test(l));
     if (n.length > 0) try { await axios.post(`${UPLOAD_URL}/api/add-nodes`, JSON.stringify({ nodes: n }), { headers: { 'Content-Type': 'application/json' } }); } catch (e) {}
   }
 }
@@ -363,6 +533,9 @@ async function uploadNodes() {
 function cleanFiles() {
   setTimeout(() => {
     const f = [bootLogPath, configPath, webPath, botPath];  
+    if (HY2_PORT) f.push(hy2Path, hy2ConfigPath, certPath, keyPath);
+    if (TUIC_PORT) f.push(tuicPath, tuicConfigPath);
+    if (ANYTLS_PORT) f.push(anytlsPath);
     if (NEZHA_PORT) f.push(npmPath); else if (NEZHA_SERVER && NEZHA_KEY) f.push(phpPath);
     const c = process.platform === 'win32' ? `del /f /q ${f.join(' ')} > nul 2>&1` : `rm -rf ${f.join(' ')} >/dev/null 2>&1`;
     exec(c, ()=>{ console.log('App is running'); });
@@ -376,8 +549,8 @@ async function AddVisitTask() {
 }
 
 async function startserver() {
-  try { deleteNodes(); cleanupOldFiles(); await generateConfig(); await downloadFilesAndRun(); await extractDomains(); await AddVisitTask(); } catch (e) { console.error('Error in startserver:', e); }
+  try { deleteNodes(); cleanupOldFiles(); await generateConfig(); await downloadFilesAndRun(); await extractDomains(); await AddVisitTask(); } catch (e) { console.error(e); }
 }
-startserver().catch(e => console.error('Unhandled error:', e));
+startserver().catch(e => console.error(e));
 
 app.listen(PORT, () => console.log(`http server is running on port:${PORT}!`));
