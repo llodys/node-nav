@@ -451,15 +451,20 @@ async function extractDomains() {
     try {
       const geoRes = await axios.get('http://ip-api.com/json/?lang=en', { timeout: 3000 });
       if (geoRes.data && geoRes.data.status === 'success') {
-        countryCode = geoRes.data.countryCode; // 获取两位字母的国家代码 (如 US, DE, SG)
-        cityName = geoRes.data.city;           // 获取城市名称 (如 Los Angeles, Frankfurt)
+        countryCode = geoRes.data.countryCode; 
+        cityName = geoRes.data.city;           
       }
     } catch (e) {
       console.log('Failed to fetch geolocation');
     }
 
-    // 核心前缀：国家缩写_城市名称 (例如: DE_Frankfurt)
-    const nodePrefix = `${countryCode}_${cityName}`;
+    // 新增：如果环境变量设置了 NAME，则使用它替换城市名称
+    if (process.env.NAME) {
+      cityName = process.env.NAME;
+    }
+
+    // 核心前缀：国家缩写-城市名称或环境变量 (注意这里从 _ 改成了 - )
+    const nodePrefix = `${countryCode}-${cityName}`;
 
     let serverIP = CFIP; 
     if (HY2_PORT || SOCKS_PORT || REALITY_PORT || TUIC_PORT || ANYTLS_PORT) {
@@ -471,42 +476,41 @@ async function extractDomains() {
       }
     }
 
-    // 后续拼接统一为 ${nodePrefix}-协议名
+    // 以下为去掉协议后缀的节点拼接逻辑
     let hy2Link = '';
     if (HY2_PORT) {
-      hy2Link = `\nhysteria2://${HY2_PASSWORD}@${serverIP}:${HY2_PORT}/?insecure=1&sni=bing.com#${nodePrefix}-HY2`;
+      hy2Link = `\nhysteria2://${HY2_PASSWORD}@${serverIP}:${HY2_PORT}/?insecure=1&sni=bing.com#${nodePrefix}`;
     }
 
     let realityLink = '';
     if (REALITY_PORT && REALITY_PUBLIC_KEY && REALITY_SHORTID) {
       const sni = REALITY_SERVER_NAMES.split(',')[0];
-      realityLink = `\nvless://${UUID}@${serverIP}:${REALITY_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${sni}&fp=chrome&pbk=${REALITY_PUBLIC_KEY}&sid=${REALITY_SHORTID}&type=tcp&headerType=none#${nodePrefix}-Reality`;
+      realityLink = `\nvless://${UUID}@${serverIP}:${REALITY_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${sni}&fp=chrome&pbk=${REALITY_PUBLIC_KEY}&sid=${REALITY_SHORTID}&type=tcp&headerType=none#${nodePrefix}`;
     }
 
     let tuicLink = '';
     if (TUIC_PORT) {
-      tuicLink = `\ntuic://${UUID}:${TUIC_PASSWORD}@${serverIP}:${TUIC_PORT}/?sni=bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${nodePrefix}-TUIC`;
+      tuicLink = `\ntuic://${UUID}:${TUIC_PASSWORD}@${serverIP}:${TUIC_PORT}/?sni=bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${nodePrefix}`;
     }
 
     let anytlsLink = '';
     if (ANYTLS_PORT) {
-      anytlsLink = `\nanytls://${ANYTLS_PASSWORD}@${serverIP}:${ANYTLS_PORT}/?sni=bing.com&allow_insecure=1#${nodePrefix}-AnyTLS`;
+      anytlsLink = `\nanytls://${ANYTLS_PASSWORD}@${serverIP}:${ANYTLS_PORT}/?sni=bing.com&allow_insecure=1#${nodePrefix}`;
     }
 
     let socksLink = '';
     if (SOCKS_PORT) {
       const credentials = Buffer.from(`${SOCKS_USER}:${SOCKS_PASS}`).toString('base64');
-      socksLink = `\nsocks://${credentials}@${serverIP}:${SOCKS_PORT}#${nodePrefix}-SOCKS5`;
+      socksLink = `\nsocks://${credentials}@${serverIP}:${SOCKS_PORT}#${nodePrefix}`;
     }
 
     return new Promise((r) => {
       setTimeout(() => {
-        // VMESS 的备注也更新为新格式
-        const v = { v: '2', ps: `${nodePrefix}-VMESS`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: d, path: '/vmess-argo?ed=2560', tls: 'tls', sni: d, alpn: '', fp: 'firefox'};
+        const v = { v: '2', ps: `${nodePrefix}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: d, path: '/vmess-argo?ed=2560', tls: 'tls', sni: d, alpn: '', fp: 'firefox'};
         
-        const vlessLink = `vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${d}&fp=firefox&type=ws&host=${d}&path=%2Fvless-argo%3Fed%3D2560#${nodePrefix}-VLESS`;
+        const vlessLink = `vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${d}&fp=firefox&type=ws&host=${d}&path=%2Fvless-argo%3Fed%3D2560#${nodePrefix}`;
         const vmessLink = `vmess://${Buffer.from(JSON.stringify(v)).toString('base64')}`;
-        const trojanLink = `trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${d}&fp=firefox&type=ws&host=${d}&path=%2Ftrojan-argo%3Fed%3D2560#${nodePrefix}-Trojan`;
+        const trojanLink = `trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${d}&fp=firefox&type=ws&host=${d}&path=%2Ftrojan-argo%3Fed%3D2560#${nodePrefix}`;
         
         const s = `${vlessLink}\n${vmessLink}\n${trojanLink}${hy2Link}${realityLink}${tuicLink}${anytlsLink}${socksLink}`;
         
