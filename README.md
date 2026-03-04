@@ -41,7 +41,7 @@
 | `ARGO_PORT` | `8001` | 否 | Argo 监听端口 |
 | `CFIP` | `cdns.doon.eu.org` | 否 | Cloudflare 优选 IP |
 | `SUB_PATH` | `sub` | 否 | 节点订阅路径 |
-| `NAME` | `node` | 否 | 节点名称前缀 |
+| `NAME` | 空 | 否 | 节点名称前缀 |
 | `NEZHA_SERVER` | 空 | 否 | 哪吒v1填写形式: nz.abc.com:8008;哪吒v0填写形式：nz.abc.com |
 | `NEZHA_PORT` | 空 | 否 | 使用哪吒v1请留空，哪吒v0需填写 |
 | `NEZHA_KEY` | 空 | 否 | 哪吒v1的NZ_CLIENT_SECRET;哪吒v0的agent密钥 |
@@ -53,7 +53,7 @@
 | `SOCKS_PASS` | `UUID` | 否 | SOCKS5 认证密码，默认使用上面的 UUID |
 | `TUIC_PORT` | 空 | 否 | TUIC 协议监听的 UDP 端口 |
 | `TUIC_PASSWORD` | `UUID` | 否 | TUIC 密码，默认使用上面的 UUID |
-| `ANYTLS_PORT` | `sub` | 否 | AnyTLS 协议监听的 TCP 端口 |
+| `ANYTLS_PORT` | 空 | 否 | AnyTLS 协议监听的 TCP 端口 |
 | `ANYTLS_PASSWORD` | `UUID` | 否 | AnyTLS密码，默认使用上面的 UUID |
 | `REALITY_PORT` | 空 | 否 | VLESS-Reality 协议监听的 TCP 端口 |
 | `REALITY_PRIVATE_KEY` | 空 | 否 | Reality 的 x25519 私钥 |
