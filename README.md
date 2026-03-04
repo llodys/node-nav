@@ -46,6 +46,22 @@
 | `NEZHA_PORT` | 空 | 否 | 使用哪吒v1请留空，哪吒v0需填写 |
 | `NEZHA_KEY` | 空 | 否 | 哪吒v1的NZ_CLIENT_SECRET;哪吒v0的agent密钥 |
 | `ADMIN_PASSWORD` | `123456` | 修改 | 后台登录密码 |
+| `HY2_PORT` | 空 | 否 | Hy2协议监听的 UDP 端口 |
+| `HY2_PASSWORD` | `UUID` | 否 | Hy2密码 默认使用上面的 UUID |
+| `SOCKS_PORT` | 空 | 否 | SOCKS5 监听的 TCP 端口 |
+| `SOCKS_USER` | `admin` | 否 | SOCKS5 认证用户名 |
+| `SOCKS_PASS` | `UUID` | 否 | SOCKS5 认证密码，默认使用上面的 UUID |
+| `TUIC_PORT` | 空 | 否 | TUIC 协议监听的 UDP 端口 |
+| `TUIC_PASSWORD` | `UUID` | 否 | TUIC 密码，默认使用上面的 UUID |
+| `ANYTLS_PORT` | `sub` | 否 | AnyTLS 协议监听的 TCP 端口 |
+| `ANYTLS_PASSWORD` | `UUID` | 否 | AnyTLS密码，默认使用上面的 UUID |
+| `REALITY_PORT` | 空 | 否 | VLESS-Reality 协议监听的 TCP 端口 |
+| `REALITY_PRIVATE_KEY` | 空 | 否 | Reality 的 x25519 私钥 |
+| `REALITY_PUBLIC_KEY` | 空 | 否 | Reality 的 x25519 公钥 |
+| `REALITY_SHORTID` | 空 | 否 | Reality 的 ShortId (最长16位十六进制） |
+| `REALITY_DEST` | 空 | 否 | Reality 伪装转发的真实目标网站 |
+| `NEZHA_KEY` | `www.microsoft.com:443` | 否 | Reality 伪装转发的真实目标网站 |
+| `REALITY_SERVER_NAMES` | `www.microsoft.com` | 修改 | Reality 伪装目标网站的 SNI，必须与 DEST 匹配 |
 
 - 安装：npm install
 - 容器平台 Docker 镜像：ghcr.io/llodys/node-nav:latest
