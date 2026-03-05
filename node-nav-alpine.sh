@@ -55,7 +55,7 @@ load_existing_config() {
         CFIP="${CFIP:-cdns.doon.eu.org}"
         SUB_PATH="${SUB_PATH:-sub}"
         NAME="${NAME:-node}"
-        ADMIN_PASSWORD="${ADMIN_PASSWORD:-123456}"
+        ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
         return 0
     fi
     return 1
@@ -188,7 +188,7 @@ initialize_install_vars() {
     CFIP="cdns.doon.eu.org"
     SUB_PATH="sub"
     NAME="node"
-    ADMIN_PASSWORD="123456"
+    ADMIN_PASSWORD="admin"
     CFPORT=443
     UUID_GENERATED=false
     OLD_CONFIG_LOADED=false
