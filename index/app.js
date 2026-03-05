@@ -4,162 +4,36 @@ const axios = require("axios");
 const os = require('os');
 const fs = require("fs");
 const path = require("path");
-const bodyParser = require("body-parser");
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
-const { execSync } = require('child_process');
 
-const UPLOAD_URL = process.env.UPLOAD_URL || '';            // 订阅节点自动上传的外部 API 地址（选填，用于统一管理多台机器的节点）
-const PROJECT_URL = process.env.PROJECT_URL || '';          // 当前项目运行的公网 URL，用于保活任务或拼接订阅路径（选填）
-const AUTO_ACCESS = process.env.AUTO_ACCESS || false;       // 是否开启自带的访问保活任务（true/false），防止云平台休眠
-const FILE_PATH = process.env.FILE_PATH || './data';        // 核心运行文件和配置文件的临时存放目录，通常不需要改
-const SUB_PATH = process.env.SUB_PATH || 'sub';             // 订阅链接的路径，例如填 'sub'，你的订阅地址就是 域名/sub
-const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;  // Web 伪装服务和内部主代理监听的本地端口
-const UUID = process.env.UUID || 'beaf3a9f-b586-4bf3-a570-3103a020d72b'; // 核心用户的 UUID，也是绝大多数协议默认的连接密码
-const NEZHA_SERVER = process.env.NEZHA_SERVER || '';        // 哪吒探针的服务端地址（选填，例如：nezha.example.com:5555）
-const NEZHA_PORT = process.env.NEZHA_PORT || '';            // 哪吒探针的服务端端口（选填，配合上面的地址使用）
-const NEZHA_KEY = process.env.NEZHA_KEY || '';              // 哪吒探针的客户端授权密钥（选填）
-const ARGO_DOMAIN = process.env.ARGO_DOMAIN || '';          // Cloudflare Argo 隧道的固定域名（选填，不填则自动抓取临时域名）
-const ARGO_AUTH = process.env.ARGO_AUTH || '';              // Cloudflare Argo 隧道的 Token 或 TunnelSecret（选填）
-const ARGO_PORT = process.env.ARGO_PORT || 8001;            // Argo 隧道在本地转发的目标端口，一般不用改
-const CFIP = process.env.CFIP || 'cdns.doon.eu.org';        // Cloudflare 优选 IP 或域名，用于生成节点订阅链接时提高速度
-const CFPORT = process.env.CFPORT || 443;                   // Cloudflare 优选 IP 对应的端口，一般配合 TLS 使用 443
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "123456";  // Web 伪装页面（书签管理页面）的管理员登录密码
+const UPLOAD_URL = process.env.UPLOAD_URL || '';      // 节点或订阅自动上传地址,需填写部署Merge-sub项目后的首页地址,例如：https://merge.xxx.com
+const PROJECT_URL = process.env.PROJECT_URL || '';    // 需要上传订阅或保活时需填写项目分配的url,例如：https://google.com
+const AUTO_ACCESS = process.env.AUTO_ACCESS || false; // false关闭自动保活，true开启,需同时填写PROJECT_URL变量
+const FILE_PATH = process.env.FILE_PATH || 'data';   // 运行目录,sub节点文件保存目录
+const SUB_PATH = process.env.SUB_PATH || 'sub';       // 订阅路径
+const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;        // http服务订阅端口
+const UUID = process.env.UUID || '9afd1229-b893-40c1-84dd-51e7ce204913'; // 使用哪吒v1,在不同的平台运行需修改UUID,否则会覆盖
+const NEZHA_SERVER = process.env.NEZHA_SERVER || '';        // 哪吒v1填写形式: nz.abc.com:8008  哪吒v0填写形式：nz.abc.com
+const NEZHA_PORT = process.env.NEZHA_PORT || '';            // 使用哪吒v1请留空，哪吒v0需填写
+const NEZHA_KEY = process.env.NEZHA_KEY || '';              // 哪吒v1的NZ_CLIENT_SECRET或哪吒v0的agent密钥
+const ARGO_DOMAIN = process.env.ARGO_DOMAIN || '';          // 固定隧道域名,留空即启用临时隧道
+const ARGO_AUTH = process.env.ARGO_AUTH || '';              // 固定隧道密钥json或token,留空即启用临时隧道,json获取地址：https://json.zone.id
+const ARGO_PORT = process.env.ARGO_PORT || 8001;            // 固定隧道端口,使用token需在cloudflare后台设置和这里一致
+const CFIP = process.env.CFIP || 'cdns.doon.eu.org';            // 节点优选域名或优选ip  
+const CFPORT = process.env.CFPORT || 443;                   // 节点优选域名或优选ip对应的端口
+const NAME = process.env.NAME || '';                        // 节点名称                  
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin'; // 书签面板管理员密码，默认为 admin
 
-const HY2_PORT = process.env.HY2_PORT || '';                // Hysteria2 协议监听的 UDP 端口（留空即代表不启动该协议）
-const HY2_PASSWORD = process.env.HY2_PASSWORD || UUID;      // Hysteria2 的连接密码，如果不填则默认使用上面的 UUID
-
-const SOCKS_PORT = process.env.SOCKS_PORT || '';            // SOCKS5 代理监听的 TCP 端口（留空即代表不启动）
-const SOCKS_USER = process.env.SOCKS_USER || 'admin';       // SOCKS5 代理的认证用户名
-const SOCKS_PASS = process.env.SOCKS_PASS || UUID;          // SOCKS5 代理的认证密码，如果不填则默认使用上面的 UUID
-
-const TUIC_PORT = process.env.TUIC_PORT || '';              // TUIC 协议监听的 UDP 端口（留空即代表不启动）
-const TUIC_PASSWORD = process.env.TUIC_PASSWORD || UUID;    // TUIC 的连接密码，如果不填则默认使用上面的 UUID
-
-const ANYTLS_PORT = process.env.ANYTLS_PORT || '';          // AnyTLS 协议监听的 TCP 端口（留空即代表不启动）
-const ANYTLS_PASSWORD = process.env.ANYTLS_PASSWORD || UUID; // AnyTLS 的连接密码，如果不填则默认使用上面的 UUID
-
-const REALITY_PORT = process.env.REALITY_PORT || '';        // VLESS-Reality 协议监听的 TCP 端口（留空即代表不启动）
-const REALITY_PRIVATE_KEY = process.env.REALITY_PRIVATE_KEY || ''; // Reality 的 x25519 私钥（仅留在服务端解密使用）
-const REALITY_PUBLIC_KEY = process.env.REALITY_PUBLIC_KEY || '';   // Reality 的 x25519 公钥（用于拼接在客户端的订阅节点中）
-const REALITY_SHORTID = process.env.REALITY_SHORTID || '';         // Reality 的 ShortId (短 ID)，额外的连接验证码（最长16位十六进制）
-const REALITY_DEST = process.env.REALITY_DEST || 'www.microsoft.com:443'; // Reality 伪装转发的真实目标网站
-const REALITY_SERVER_NAMES = process.env.REALITY_SERVER_NAMES || 'www.microsoft.com'; // Reality 伪装目标网站的 SNI，必须与 DEST 匹配
-
-const bookmarksPath = path.join(FILE_PATH, 'bookmarks.json');
-const defaultBookmarks = {}; 
-
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-let systemStatus = { cpu: 0, mem: 0, disk: 0, uptime: 0, load: 0, netIn: 0, netOut: 0 };
-
-function getCpuInfo() {
-    const cpus = os.cpus();
-    let user = 0, nice = 0, sys = 0, idle = 0, irq = 0;
-    for (let cpu of cpus) { user += cpu.times.user; nice += cpu.times.nice; sys += cpu.times.sys; idle += cpu.times.idle; irq += cpu.times.irq; }
-    return { idle, total: user + nice + sys + idle + irq };
+// 创建运行文件夹 (data)
+if (!fs.existsSync(FILE_PATH)) {
+  fs.mkdirSync(FILE_PATH, { recursive: true });
+  console.log(`${FILE_PATH} is created`);
+} else {
+  console.log(`${FILE_PATH} already exists`);
 }
 
-let lastCpuInfo = getCpuInfo();
-let lastNetStat = { rx: 0, tx: 0, time: Date.now() };
-
-async function updateNetStats() {
-    try {
-        if (process.platform !== 'linux') return;
-        const data = await fs.promises.readFile('/proc/net/dev', 'utf8');
-        const lines = data.split('\n');
-        let rx = 0, tx = 0;
-        for (let i = 2; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) continue;
-            const parts = line.split(/\s+/);
-            if (parts.length >= 10) {
-                const rxVal = parseInt(parts[0].includes(':') ? parts[1] : parts[1]);
-                const txVal = parseInt(parts[0].includes(':') ? parts[9] : parts[9]); 
-                if (!isNaN(rxVal)) rx += rxVal;
-                if (!isNaN(txVal)) tx += txVal;
-            }
-        }
-        const now = Date.now();
-        const duration = (now - lastNetStat.time) / 1000; 
-        if (duration > 0 && lastNetStat.rx > 0) {
-            systemStatus.netIn = ((rx - lastNetStat.rx) / duration).toFixed(0);
-            systemStatus.netOut = ((tx - lastNetStat.tx) / duration).toFixed(0);
-        }
-        lastNetStat = { rx, tx, time: now };
-    } catch (e) {}
-}
-
-setInterval(async () => {
-    const currentCpuInfo = getCpuInfo();
-    const totalDiff = currentCpuInfo.total - lastCpuInfo.total;
-    const idleDiff = currentCpuInfo.idle - lastCpuInfo.idle;
-    if (totalDiff > 0) systemStatus.cpu = ((1 - idleDiff / totalDiff) * 100).toFixed(0);
-    lastCpuInfo = currentCpuInfo;
-
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    systemStatus.mem = (((totalMem - freeMem) / totalMem) * 100).toFixed(0);
-
-    systemStatus.uptime = os.uptime();
-    systemStatus.load = os.loadavg()[0].toFixed(2);
-
-    await updateNetStats();
-
-    if (process.platform === 'linux') {
-        try { 
-            const { stdout } = await exec("df -h / | tail -1 | awk '{print $5}'"); 
-            systemStatus.disk = parseInt(stdout.replace('%', '')) || 0; 
-        } catch (err) {}
-    }
-}, 2000);
-
-app.get('/api/status', (req, res) => { res.json(systemStatus); });
-
-if (!fs.existsSync(FILE_PATH)) { fs.mkdirSync(FILE_PATH, { recursive: true }); console.log(`${FILE_PATH} is created`); } 
-else { console.log(`${FILE_PATH} already exists`); }
-
-app.get("/", (req, res) => {
-  const indexPath = path.join(__dirname, 'public', 'index.html');
-  if (fs.existsSync(indexPath)) res.sendFile(indexPath);
-  else res.send("Welcome! Service is running. Please place index.html in the 'public' folder.");
-});
-
-app.get("/login", (req, res) => { res.sendFile(path.join(__dirname, 'public', 'login.html')); });
-app.get("/admin", (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
-
-app.post("/check-password", (req, res) => {
-  const { password } = req.body;
-  if (password === ADMIN_PASSWORD) res.json({ success: true });
-  else res.json({ success: false });
-});
-
-app.get('/api/bookmarks', (req, res) => {
-  if (fs.existsSync(bookmarksPath)) {
-    fs.readFile(bookmarksPath, 'utf8', (err, data) => {
-      if (err) return res.status(500).json({ error: 'Failed to read bookmarks file.' });
-      try { res.json(JSON.parse(data)); } catch (parseErr) { res.status(500).json({ error: 'Failed to parse bookmarks file.' }); }
-    });
-  } else {
-    fs.writeFile(bookmarksPath, JSON.stringify(defaultBookmarks, null, 2), 'utf8', (err) => {
-      if (err) return res.status(500).json({ error: 'Failed to create bookmarks file.' });
-      res.json(defaultBookmarks);
-    });
-  }
-});
-
-app.post('/api/bookmarks', (req, res) => {
-  const { password, bookmarksData } = req.body;
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ success: false, message: 'Invalid password.' });
-  if (!bookmarksData) return res.status(400).json({ success: false, message: 'No data provided.' });
-
-  fs.writeFile(bookmarksPath, JSON.stringify(bookmarksData, null, 2), 'utf8', (err) => {
-    if (err) return res.status(500).json({ success: false, message: 'Failed to save bookmarks.' });
-    res.json({ success: true, message: 'Bookmarks saved successfully.' });
-  });
-});
-
+// 生成随机6位字符文件名
 function generateRandomName() {
   const characters = 'abcdefghijklmnopqrstuvwxyz';
   let result = '';
@@ -169,15 +43,11 @@ function generateRandomName() {
   return result;
 }
 
-// 文件路径生成
+// 全局常量
 const npmName = generateRandomName();
 const webName = generateRandomName();
 const botName = generateRandomName();
 const phpName = generateRandomName();
-const hy2Name = generateRandomName(); 
-const tuicName = generateRandomName();
-const anytlsName = generateRandomName();
-
 let npmPath = path.join(FILE_PATH, npmName);
 let phpPath = path.join(FILE_PATH, phpName);
 let webPath = path.join(FILE_PATH, webName);
@@ -187,46 +57,62 @@ let listPath = path.join(FILE_PATH, 'list.txt');
 let bootLogPath = path.join(FILE_PATH, 'boot.log');
 let configPath = path.join(FILE_PATH, 'config.json');
 
-let hy2Path = path.join(FILE_PATH, hy2Name);
-let hy2ConfigPath = path.join(FILE_PATH, 'hy2_config.json');
-
-let tuicPath = path.join(FILE_PATH, tuicName);
-let tuicConfigPath = path.join(FILE_PATH, 'tuic_config.json');
-
-let anytlsPath = path.join(FILE_PATH, anytlsName);
-
-let certPath = path.join(FILE_PATH, 'server.crt');
-let keyPath = path.join(FILE_PATH, 'server.key');
-
+// 如果订阅器上存在历史运行节点则先删除
 function deleteNodes() {
   try {
     if (!UPLOAD_URL) return;
     if (!fs.existsSync(subPath)) return;
+
     let fileContent;
-    try { fileContent = fs.readFileSync(subPath, 'utf-8'); } catch { return null; }
+    try {
+      fileContent = fs.readFileSync(subPath, 'utf-8');
+    } catch {
+      return null;
+    }
+
     const decoded = Buffer.from(fileContent, 'base64').toString('utf-8');
-    const nodes = decoded.split('\n').filter(line => /(vless|vmess|trojan|hysteria2|tuic|anytls|socks):\/\//.test(line));
+    const nodes = decoded.split('\n').filter(line => 
+      /(vless|vmess|trojan|hysteria2|tuic):\/\//.test(line)
+    );
+
     if (nodes.length === 0) return;
-    axios.post(`${UPLOAD_URL}/api/delete-nodes`, JSON.stringify({ nodes }), { headers: { 'Content-Type': 'application/json' } }).catch((error) => { return null; });
+
+    axios.post(`${UPLOAD_URL}/api/delete-nodes`, 
+      JSON.stringify({ nodes }),
+      { headers: { 'Content-Type': 'application/json' } }
+    ).catch((error) => { 
+      return null; 
+    });
     return null;
-  } catch (err) { return null; }
+  } catch (err) {
+    return null;
+  }
 }
 
+// 清理历史文件
 function cleanupOldFiles() {
   try {
     const files = fs.readdirSync(FILE_PATH);
     files.forEach(file => {
       const filePath = path.join(FILE_PATH, file);
+      // 注意：跳过书签文件 bookmarks.json，防止被误清理
+      if (file === 'bookmarks.json') return; 
+      
       try {
         const stat = fs.statSync(filePath);
-        if (stat.isFile() && path.basename(filePath) !== 'bookmarks.json') {
+        if (stat.isFile()) {
           fs.unlinkSync(filePath);
         }
-      } catch (err) {}
+      } catch (err) {
+        // 忽略所有错误
+      }
     });
-  } catch (err) {}
+  } catch (err) {
+    // 忽略所有错误
+  }
 }
 
+// 生成xr-ay配置文件
 async function generateConfig() {
   const config = {
     log: { access: '/dev/null', error: '/dev/null', loglevel: 'none' },
@@ -240,321 +126,580 @@ async function generateConfig() {
     dns: { servers: ["https+local://8.8.8.8/dns-query"] },
     outbounds: [ { protocol: "freedom", tag: "direct" }, {protocol: "blackhole", tag: "block"} ]
   };
-
-  if (SOCKS_PORT) {
-    config.inbounds.push({
-      port: parseInt(SOCKS_PORT),
-      listen: "0.0.0.0", 
-      protocol: "socks",
-      settings: { auth: "password", accounts: [{ user: SOCKS_USER, pass: SOCKS_PASS }], udp: true }
-    });
-  }
-
-  // 注入 VLESS-Reality 节点
-  if (REALITY_PORT && REALITY_PRIVATE_KEY && REALITY_PUBLIC_KEY && REALITY_SHORTID) {
-    config.inbounds.push({
-      port: parseInt(REALITY_PORT),
-      listen: "0.0.0.0",
-      protocol: "vless",
-      settings: {
-        clients: [{ id: UUID, flow: "xtls-rprx-vision" }],
-        decryption: "none"
-      },
-      streamSettings: {
-        network: "tcp",
-        security: "reality",
-        realitySettings: {
-          show: false,
-          dest: REALITY_DEST,
-          xver: 0,
-          serverNames: REALITY_SERVER_NAMES.split(','),
-          privateKey: REALITY_PRIVATE_KEY,
-          shortIds: [REALITY_SHORTID]
-        }
-      }
-    });
-  }
-
   fs.writeFileSync(path.join(FILE_PATH, 'config.json'), JSON.stringify(config, null, 2));
 }
 
+// 判断系统架构
 function getSystemArchitecture() {
   const arch = os.arch();
-  if (arch === 'arm' || arch === 'arm64' || arch === 'aarch64') { return 'arm'; } else { return 'amd'; }
+  if (arch === 'arm' || arch === 'arm64' || arch === 'aarch64') {
+    return 'arm';
+  } else {
+    return 'amd';
+  }
 }
 
+// 下载对应系统架构的依赖文件
 function downloadFile(fileName, fileUrl, callback) {
   const filePath = fileName; 
-  if (!fs.existsSync(FILE_PATH)) { fs.mkdirSync(FILE_PATH, { recursive: true }); }
+  
+  if (!fs.existsSync(FILE_PATH)) {
+    fs.mkdirSync(FILE_PATH, { recursive: true });
+  }
+  
   const writer = fs.createWriteStream(filePath);
-  axios({ method: 'get', url: fileUrl, responseType: 'stream', })
+
+  axios({
+    method: 'get',
+    url: fileUrl,
+    responseType: 'stream',
+  })
     .then(response => {
       response.data.pipe(writer);
-      writer.on('finish', () => { writer.close(); console.log(`Download ${path.basename(filePath)} successfully`); callback(null, filePath); });
-      writer.on('error', err => { fs.unlink(filePath, () => { }); console.error(`Download ${path.basename(filePath)} failed: ${err.message}`); callback(err.message); });
+
+      writer.on('finish', () => {
+        writer.close();
+        console.log(`Download ${path.basename(filePath)} successfully`);
+        callback(null, filePath);
+      });
+
+      writer.on('error', err => {
+        fs.unlink(filePath, () => { });
+        const errorMessage = `Download ${path.basename(filePath)} failed: ${err.message}`;
+        console.error(errorMessage);
+        callback(errorMessage);
+      });
     })
-    .catch(err => { console.error(`Download ${path.basename(filePath)} failed: ${err.message}`); callback(err.message); });
+    .catch(err => {
+      const errorMessage = `Download ${path.basename(filePath)} failed: ${err.message}`;
+      console.error(errorMessage);
+      callback(errorMessage);
+    });
 }
 
+// 下载并运行依赖文件
 async function downloadFilesAndRun() {  
+  
   const architecture = getSystemArchitecture();
-  const filesToDownload = (architecture === 'arm') ? 
-    [{ fileName: webPath, fileUrl: "https://arm64.ssss.nyc.mn/web" }, { fileName: botPath, fileUrl: "https://arm64.ssss.nyc.mn/bot" }] : 
-    [{ fileName: webPath, fileUrl: "https://amd64.ssss.nyc.mn/web" }, { fileName: botPath, fileUrl: "https://amd64.ssss.nyc.mn/bot" }];
+  const filesToDownload = getFilesForArchitecture(architecture);
 
-  if (HY2_PORT) {
-    const hy2Url = architecture === 'arm' ? 
-      "https://github.com/apernet/hysteria/releases/latest/download/hysteria-linux-arm64" : 
-      "https://github.com/apernet/hysteria/releases/latest/download/hysteria-linux-amd64";
-    filesToDownload.push({ fileName: hy2Path, fileUrl: hy2Url });
+  if (filesToDownload.length === 0) {
+    console.log(`Can't find a file for the current architecture`);
+    return;
   }
 
-  if (TUIC_PORT) {
-    const tuicUrl = architecture === 'arm' ? 
-      "https://github.com/EAimTY/tuic/releases/download/tuic-server-1.0.0/tuic-server-1.0.0-aarch64-unknown-linux-musl" : 
-      "https://github.com/EAimTY/tuic/releases/download/tuic-server-1.0.0/tuic-server-1.0.0-x86_64-unknown-linux-musl";
-    filesToDownload.push({ fileName: tuicPath, fileUrl: tuicUrl });
+  const downloadPromises = filesToDownload.map(fileInfo => {
+    return new Promise((resolve, reject) => {
+      downloadFile(fileInfo.fileName, fileInfo.fileUrl, (err, filePath) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(filePath);
+        }
+      });
+    });
+  });
+
+  try {
+    await Promise.all(downloadPromises);
+  } catch (err) {
+    console.error('Error downloading files:', err);
+    return;
+  }
+  // 授权和运行
+  function authorizeFiles(filePaths) {
+    const newPermissions = 0o775;
+    filePaths.forEach(absoluteFilePath => {
+      if (fs.existsSync(absoluteFilePath)) {
+        fs.chmod(absoluteFilePath, newPermissions, (err) => {
+          if (err) {
+            console.error(`Empowerment failed for ${absoluteFilePath}: ${err}`);
+          } else {
+            console.log(`Empowerment success for ${absoluteFilePath}: ${newPermissions.toString(8)}`);
+          }
+        });
+      }
+    });
+  }
+  const filesToAuthorize = NEZHA_PORT ? [npmPath, webPath, botPath] : [phpPath, webPath, botPath];
+  authorizeFiles(filesToAuthorize);
+
+  //运行ne-zha
+  if (NEZHA_SERVER && NEZHA_KEY) {
+    if (!NEZHA_PORT) {
+      // 检测哪吒是否开启TLS
+      const port = NEZHA_SERVER.includes(':') ? NEZHA_SERVER.split(':').pop() : '';
+      const tlsPorts = new Set(['443', '8443', '2096', '2087', '2083', '2053']);
+      const nezhatls = tlsPorts.has(port) ? 'true' : 'false';
+      // 生成 config.yaml
+      const configYaml = `
+client_secret: ${NEZHA_KEY}
+debug: false
+disable_auto_update: true
+disable_command_execute: false
+disable_force_update: true
+disable_nat: false
+disable_send_query: false
+gpu: false
+insecure_tls: true
+ip_report_period: 1800
+report_delay: 4
+server: ${NEZHA_SERVER}
+skip_connection_count: true
+skip_procs_count: true
+temperature: false
+tls: ${nezhatls}
+use_gitee_to_upgrade: false
+use_ipv6_country_code: false
+uuid: ${UUID}`;
+      
+      fs.writeFileSync(path.join(FILE_PATH, 'config.yaml'), configYaml);
+      
+      // 运行 v1
+      const command = `nohup ${phpPath} -c "${FILE_PATH}/config.yaml" >/dev/null 2>&1 &`;
+      try {
+        await exec(command);
+        console.log(`${phpName} is running`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error(`php running error: ${error}`);
+      }
+    } else {
+      let NEZHA_TLS = '';
+      const tlsPorts = ['443', '8443', '2096', '2087', '2083', '2053'];
+      if (tlsPorts.includes(NEZHA_PORT)) {
+        NEZHA_TLS = '--tls';
+      }
+      const command = `nohup ${npmPath} -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} ${NEZHA_TLS} --disable-auto-update --report-delay 4 --skip-conn --skip-procs >/dev/null 2>&1 &`;
+      try {
+        await exec(command);
+        console.log(`${npmName} is running`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error(`npm running error: ${error}`);
+      }
+    }
+  } else {
+    console.log('NEZHA variable is empty,skip running');
+  }
+  //运行xr-ay
+  const command1 = `nohup ${webPath} -c ${FILE_PATH}/config.json >/dev/null 2>&1 &`;
+  try {
+    await exec(command1);
+    console.log(`${webName} is running`);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  } catch (error) {
+    console.error(`web running error: ${error}`);
   }
 
-  if (ANYTLS_PORT) {
-    const anytlsUrl = architecture === 'arm' ? 
-      "https://github.com/jxo-me/anytls-rs/releases/latest/download/anytls-rs-aarch64-unknown-linux-musl" : 
-      "https://github.com/jxo-me/anytls-rs/releases/latest/download/anytls-rs-x86_64-unknown-linux-musl";
-    filesToDownload.push({ fileName: anytlsPath, fileUrl: anytlsUrl });
+  // 运行cloud-fared
+  if (fs.existsSync(botPath)) {
+    let args;
+
+    if (ARGO_AUTH.match(/^[A-Z0-9a-z=]{120,250}$/)) {
+      args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 run --token ${ARGO_AUTH}`;
+    } else if (ARGO_AUTH.match(/TunnelSecret/)) {
+      args = `tunnel --edge-ip-version auto --config ${FILE_PATH}/tunnel.yml run`;
+    } else {
+      args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ARGO_PORT}`;
+    }
+
+    try {
+      await exec(`nohup ${botPath} ${args} >/dev/null 2>&1 &`);
+      console.log(`${botName} is running`);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    } catch (error) {
+      console.error(`Error executing command: ${error}`);
+    }
+  }
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+
+}
+
+//根据系统架构返回对应的url
+function getFilesForArchitecture(architecture) {
+  let baseFiles;
+  if (architecture === 'arm') {
+    baseFiles = [
+      { fileName: webPath, fileUrl: "https://arm64.ssss.nyc.mn/web" },
+      { fileName: botPath, fileUrl: "https://arm64.ssss.nyc.mn/bot" }
+    ];
+  } else {
+    baseFiles = [
+      { fileName: webPath, fileUrl: "https://amd64.ssss.nyc.mn/web" },
+      { fileName: botPath, fileUrl: "https://amd64.ssss.nyc.mn/bot" }
+    ];
   }
 
   if (NEZHA_SERVER && NEZHA_KEY) {
     if (NEZHA_PORT) {
-      filesToDownload.unshift({ fileName: npmPath, fileUrl: architecture === 'arm' ? "https://arm64.ssss.nyc.mn/agent" : "https://amd64.ssss.nyc.mn/agent" });
+      const npmUrl = architecture === 'arm' 
+        ? "https://arm64.ssss.nyc.mn/agent"
+        : "https://amd64.ssss.nyc.mn/agent";
+        baseFiles.unshift({ 
+          fileName: npmPath, 
+          fileUrl: npmUrl 
+        });
     } else {
-      filesToDownload.unshift({ fileName: phpPath, fileUrl: architecture === 'arm' ? "https://arm64.ssss.nyc.mn/v1" : "https://amd64.ssss.nyc.mn/v1" });
+      const phpUrl = architecture === 'arm' 
+        ? "https://arm64.ssss.nyc.mn/v1" 
+        : "https://amd64.ssss.nyc.mn/v1";
+      baseFiles.unshift({ 
+        fileName: phpPath, 
+        fileUrl: phpUrl
+      });
     }
   }
 
-  try {
-    await Promise.all(filesToDownload.map(fileInfo => new Promise((resolve, reject) => {
-      downloadFile(fileInfo.fileName, fileInfo.fileUrl, (err, filePath) => { if (err) reject(err); else resolve(filePath); });
-    })));
-  } catch (err) { console.error('Error downloading files:', err); return; }
-  
-  const filesToAuthorize = NEZHA_PORT ? [npmPath, webPath, botPath] : [phpPath, webPath, botPath];
-  if (HY2_PORT) filesToAuthorize.push(hy2Path);
-  if (TUIC_PORT) filesToAuthorize.push(tuicPath);
-  if (ANYTLS_PORT) filesToAuthorize.push(anytlsPath);
-  filesToAuthorize.forEach(p => { if (fs.existsSync(p)) fs.chmod(p, 0o775, ()=>{}); });
-
-  // 共享生成自签证书
-  if ((HY2_PORT || TUIC_PORT || ANYTLS_PORT) && !fs.existsSync(certPath)) {
-    try {
-      await exec(`openssl req -x509 -nodes -newkey rsa:2048 -keyout ${keyPath} -out ${certPath} -days 3650 -subj "/CN=bing.com"`);
-    } catch (e) { console.error("Certificate generation failed:", e.message); }
-  }
-
-  if (HY2_PORT) {
-    try {
-      const hy2Config = {
-        listen: `:${HY2_PORT}`,
-        tls: { cert: certPath, key: keyPath },
-        auth: { type: "password", password: HY2_PASSWORD },
-        masquerade: { type: "proxy", proxy: { url: "https://bing.com", rewriteHost: true } }
-      };
-      fs.writeFileSync(hy2ConfigPath, JSON.stringify(hy2Config, null, 2));
-      await exec(`nohup ${hy2Path} server -c ${hy2ConfigPath} >/dev/null 2>&1 &`);
-      console.log(`Hysteria2 started on UDP port ${HY2_PORT}`);
-    } catch (e) { console.error(e.message); }
-  }
-
-  if (TUIC_PORT) {
-    try {
-      const tuicConfig = {
-        server: `[::]:${TUIC_PORT}`,
-        users: { [UUID]: TUIC_PASSWORD },
-        certificate: certPath,
-        private_key: keyPath,
-        congestion_control: "bbr",
-        alpn: ["h3", "spdy/3.1"],
-        udp_relay_ipv6: true
-      };
-      fs.writeFileSync(tuicConfigPath, JSON.stringify(tuicConfig, null, 2));
-      await exec(`nohup ${tuicPath} -c ${tuicConfigPath} >/dev/null 2>&1 &`);
-      console.log(`TUIC started on UDP port ${TUIC_PORT}`);
-    } catch (e) { console.error(e.message); }
-  }
-
-  if (ANYTLS_PORT) {
-    try {
-      await exec(`nohup ${anytlsPath} -l 0.0.0.0:${ANYTLS_PORT} -p ${ANYTLS_PASSWORD} --cert ${certPath} --key ${keyPath} >/dev/null 2>&1 &`);
-      console.log(`AnyTLS started on TCP port ${ANYTLS_PORT}`);
-    } catch (e) { console.error(e.message); }
-  }
-
-  if (NEZHA_SERVER && NEZHA_KEY) {
-    if (!NEZHA_PORT) {
-      const port = NEZHA_SERVER.includes(':') ? NEZHA_SERVER.split(':').pop() : '';
-      const tls = new Set(['443', '8443', '2096', '2087', '2083', '2053']).has(port) ? 'true' : 'false';
-      const configYaml = `client_secret: ${NEZHA_KEY}\ndebug: false\ndisable_auto_update: true\ndisable_command_execute: false\ndisable_force_update: true\ndisable_nat: false\ndisable_send_query: false\ngpu: false\ninsecure_tls: true\nip_report_period: 1800\nreport_delay: 4\nserver: ${NEZHA_SERVER}\nskip_connection_count: true\nskip_procs_count: true\ntemperature: false\ntls: ${tls}\nuse_gitee_to_upgrade: false\nuse_ipv6_country_code: false\nuuid: ${UUID}`;
-      fs.writeFileSync(path.join(FILE_PATH, 'config.yaml'), configYaml);
-      try { await exec(`nohup ${phpPath} -c "${FILE_PATH}/config.yaml" >/dev/null 2>&1 &`); await new Promise((r) => setTimeout(r, 1000)); } catch (e) {}
-    } else {
-      let tls = ['443', '8443', '2096', '2087', '2083', '2053'].includes(NEZHA_PORT) ? '--tls' : '';
-      try { await exec(`nohup ${npmPath} -s ${NEZHA_SERVER}:${NEZHA_PORT} -p ${NEZHA_KEY} ${tls} --disable-auto-update --report-delay 4 --skip-conn --skip-procs >/dev/null 2>&1 &`); await new Promise((r) => setTimeout(r, 1000)); } catch (e) {}
-    }
-  }
-  
-  try { await exec(`nohup ${webPath} -c ${FILE_PATH}/config.json >/dev/null 2>&1 &`); await new Promise((r) => setTimeout(r, 1000)); } catch (e) {}
-
-  if (fs.existsSync(botPath)) {
-    let args;
-    if (ARGO_AUTH.match(/^[A-Z0-9a-z=]{120,250}$/)) args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 run --token ${ARGO_AUTH}`;
-    else if (ARGO_AUTH.match(/TunnelSecret/)) args = `tunnel --edge-ip-version auto --config ${FILE_PATH}/tunnel.yml run`;
-    else args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ARGO_PORT}`;
-    try { await exec(`nohup ${botPath} ${args} >/dev/null 2>&1 &`); await new Promise((r) => setTimeout(r, 2000)); } catch (e) {}
-  }
-  await new Promise((r) => setTimeout(r, 5000));
+  return baseFiles;
 }
 
+// 获取固定隧道json
 function argoType() {
-  if (!ARGO_AUTH || !ARGO_DOMAIN) return;
+  if (!ARGO_AUTH || !ARGO_DOMAIN) {
+    console.log("ARGO_DOMAIN or ARGO_AUTH variable is empty, use quick tunnels");
+    return;
+  }
+
   if (ARGO_AUTH.includes('TunnelSecret')) {
     fs.writeFileSync(path.join(FILE_PATH, 'tunnel.json'), ARGO_AUTH);
-    const y = `tunnel: ${ARGO_AUTH.split('"')[11]}\ncredentials-file: ${path.join(FILE_PATH, 'tunnel.json')}\nprotocol: http2\ningress:\n  - hostname: ${ARGO_DOMAIN}\n    service: http://localhost:${ARGO_PORT}\n    originRequest:\n      noTLSVerify: true\n  - service: http_status:404`;
-    fs.writeFileSync(path.join(FILE_PATH, 'tunnel.yml'), y);
+    const tunnelYaml = `
+  tunnel: ${ARGO_AUTH.split('"')[11]}
+  credentials-file: ${path.join(FILE_PATH, 'tunnel.json')}
+  protocol: http2
+  
+  ingress:
+    - hostname: ${ARGO_DOMAIN}
+      service: http://localhost:${ARGO_PORT}
+      originRequest:
+        noTLSVerify: true
+    - service: http_status:404
+  `;
+    fs.writeFileSync(path.join(FILE_PATH, 'tunnel.yml'), tunnelYaml);
+  } else {
+    console.log("ARGO_AUTH mismatch TunnelSecret,use token connect to tunnel");
   }
 }
-argoType();
 
+// 获取临时隧道domain
 async function extractDomains() {
-  let d;
-  if (ARGO_AUTH && ARGO_DOMAIN) { d = ARGO_DOMAIN; await generateLinks(d); } 
-  else {
+  let argoDomain;
+
+  if (ARGO_AUTH && ARGO_DOMAIN) {
+    argoDomain = ARGO_DOMAIN;
+    console.log('ARGO_DOMAIN:', argoDomain);
+    await generateLinks(argoDomain);
+  } else {
     try {
-      const c = fs.readFileSync(path.join(FILE_PATH, 'boot.log'), 'utf-8');
-      const lines = c.split('\n');
-      const ds = [];
-      lines.forEach((line) => { const m = line.match(/https?:\/\/([^ ]*trycloudflare\.com)\/?/); if (m) ds.push(m[1]); });
-      if (ds.length > 0) { d = ds[0]; await generateLinks(d); } 
-      else {
-        try { fs.unlinkSync(path.join(FILE_PATH, 'boot.log')); } catch(e){}
-        try { if (process.platform === 'win32') await exec(`taskkill /f /im ${botName}.exe > nul 2>&1`); else await exec(`pkill -f "[${botName.charAt(0)}]${botName.substring(1)}" > /dev/null 2>&1`); } catch (e) {}
-        await new Promise((r) => setTimeout(r, 3000));
+      const fileContent = fs.readFileSync(path.join(FILE_PATH, 'boot.log'), 'utf-8');
+      const lines = fileContent.split('\n');
+      const argoDomains = [];
+      lines.forEach((line) => {
+        const domainMatch = line.match(/https?:\/\/([^ ]*trycloudflare\.com)\/?/);
+        if (domainMatch) {
+          const domain = domainMatch[1];
+          argoDomains.push(domain);
+        }
+      });
+
+      if (argoDomains.length > 0) {
+        argoDomain = argoDomains[0];
+        console.log('ArgoDomain:', argoDomain);
+        await generateLinks(argoDomain);
+      } else {
+        console.log('ArgoDomain not found, re-running bot to obtain ArgoDomain');
+        fs.unlinkSync(path.join(FILE_PATH, 'boot.log'));
+        async function killBotProcess() {
+          try {
+            if (process.platform === 'win32') {
+              await exec(`taskkill /f /im ${botName}.exe > nul 2>&1`);
+            } else {
+              await exec(`pkill -f "[${botName.charAt(0)}]${botName.substring(1)}" > /dev/null 2>&1`);
+            }
+          } catch (error) {
+          }
+        }
+        killBotProcess();
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         const args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${ARGO_PORT}`;
-        try { await exec(`nohup ${botPath} ${args} >/dev/null 2>&1 &`); await new Promise((r) => setTimeout(r, 3000)); await extractDomains(); } catch (e) {}
+        try {
+          await exec(`nohup ${botPath} ${args} >/dev/null 2>&1 &`);
+          console.log(`${botName} is running`);
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          await extractDomains(); // 重新提取域名
+        } catch (error) {
+          console.error(`Error executing command: ${error}`);
+        }
       }
-    } catch (e) {}
+    } catch (error) {
+      console.error('Error reading boot.log:', error);
   }
+}
 
-  async function generateLinks(d) {
-    let cityName = 'UnknownCity';
-    let countryCode = 'UN'; 
-    
-    // 获取英文国家代码缩写和城市名称
-    try {
-      const geoRes = await axios.get('http://ip-api.com/json/?lang=en', { timeout: 3000 });
-      if (geoRes.data && geoRes.data.status === 'success') {
-        countryCode = geoRes.data.countryCode; 
-        cityName = geoRes.data.city;           
-      }
-    } catch (e) {
-      console.log('Failed to fetch geolocation');
+// 获取isp信息
+async function getMetaInfo() {
+  try {
+    const response1 = await axios.get('https://api.ip.sb/geoip', { headers: { 'User-Agent': 'Mozilla/5.0', timeout: 3000 }});
+    if (response1.data && response1.data.country_code && response1.data.isp) {
+      return `${response1.data.country_code}-${response1.data.isp}`.replace(/\s+/g, '_');
     }
-
-    // 新增：如果环境变量设置了 NAME，则使用它替换城市名称
-    if (process.env.NAME) {
-      cityName = process.env.NAME;
-    }
-
-    // 核心前缀：国家缩写-城市名称或环境变量 (注意这里从 _ 改成了 - )
-    const nodePrefix = `${countryCode}-${cityName}`;
-
-    let serverIP = CFIP; 
-    if (HY2_PORT || SOCKS_PORT || REALITY_PORT || TUIC_PORT || ANYTLS_PORT) {
+  } catch (error) {
       try {
-        const ipRes = await axios.get('https://api.ipify.org?format=json', { timeout: 3000 });
-        if (ipRes.data.ip) serverIP = ipRes.data.ip;
-      } catch (e) {
-        console.log('Failed to fetch public IP, fallback to CFIP');
+        const response2 = await axios.get('http://ip-api.com/json', { headers: { 'User-Agent': 'Mozilla/5.0', timeout: 3000 }});
+        if (response2.data && response2.data.status === 'success' && response2.data.countryCode && response2.data.org) {
+          return `${response2.data.countryCode}-${response2.data.org}`.replace(/\s+/g, '_');
+        }
+      } catch (error) {
       }
-    }
+  }
+  return 'Unknown';
+}
+// 生成 list 和 sub 信息
+async function generateLinks(argoDomain) {
+  const ISP = await getMetaInfo();
+  const nodeName = NAME ? `${NAME}-${ISP}` : ISP;
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const VMESS = { v: '2', ps: `${nodeName}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'auto', net: 'ws', type: 'none', host: argoDomain, path: '/vmess-argo?ed=2560', tls: 'tls', sni: argoDomain, alpn: '', fp: 'firefox'};
+      const subTxt = `
+vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${argoDomain}&fp=firefox&type=ws&host=${argoDomain}&path=%2Fvless-argo%3Fed%3D2560#${nodeName}
 
-    // 以下为去掉协议后缀的节点拼接逻辑
-    let hy2Link = '';
-    if (HY2_PORT) {
-      hy2Link = `\nhysteria2://${HY2_PASSWORD}@${serverIP}:${HY2_PORT}/?insecure=1&sni=bing.com#${nodePrefix}`;
-    }
+vmess://${Buffer.from(JSON.stringify(VMESS)).toString('base64')}
 
-    let realityLink = '';
-    if (REALITY_PORT && REALITY_PUBLIC_KEY && REALITY_SHORTID) {
-      const sni = REALITY_SERVER_NAMES.split(',')[0];
-      realityLink = `\nvless://${UUID}@${serverIP}:${REALITY_PORT}?encryption=none&flow=xtls-rprx-vision&security=reality&sni=${sni}&fp=chrome&pbk=${REALITY_PUBLIC_KEY}&sid=${REALITY_SHORTID}&type=tcp&headerType=none#${nodePrefix}`;
-    }
-
-    let tuicLink = '';
-    if (TUIC_PORT) {
-      tuicLink = `\ntuic://${UUID}:${TUIC_PASSWORD}@${serverIP}:${TUIC_PORT}/?sni=bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${nodePrefix}`;
-    }
-
-    let anytlsLink = '';
-    if (ANYTLS_PORT) {
-      anytlsLink = `\nanytls://${ANYTLS_PASSWORD}@${serverIP}:${ANYTLS_PORT}/?sni=bing.com&allow_insecure=1#${nodePrefix}`;
-    }
-
-    let socksLink = '';
-    if (SOCKS_PORT) {
-      const credentials = Buffer.from(`${SOCKS_USER}:${SOCKS_PASS}`).toString('base64');
-      socksLink = `\nsocks://${credentials}@${serverIP}:${SOCKS_PORT}#${nodePrefix}`;
-    }
-
-    return new Promise((r) => {
-      setTimeout(() => {
-        const v = { v: '2', ps: `${nodePrefix}`, add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'none', net: 'ws', type: 'none', host: d, path: '/vmess-argo?ed=2560', tls: 'tls', sni: d, alpn: '', fp: 'firefox'};
-        
-        const vlessLink = `vless://${UUID}@${CFIP}:${CFPORT}?encryption=none&security=tls&sni=${d}&fp=firefox&type=ws&host=${d}&path=%2Fvless-argo%3Fed%3D2560#${nodePrefix}`;
-        const vmessLink = `vmess://${Buffer.from(JSON.stringify(v)).toString('base64')}`;
-        const trojanLink = `trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${d}&fp=firefox&type=ws&host=${d}&path=%2Ftrojan-argo%3Fed%3D2560#${nodePrefix}`;
-        
-        const s = `${vlessLink}\n${vmessLink}\n${trojanLink}${hy2Link}${realityLink}${tuicLink}${anytlsLink}${socksLink}`;
-        
-        fs.writeFileSync(subPath, Buffer.from(s).toString('base64'));
-        uploadNodes();
-        app.get(`/${SUB_PATH}`, (req, res) => { res.set('Content-Type', 'text/plain; charset=utf-8'); res.send(Buffer.from(s).toString('base64')); });
-        r(s);
+trojan://${UUID}@${CFIP}:${CFPORT}?security=tls&sni=${argoDomain}&fp=firefox&type=ws&host=${argoDomain}&path=%2Ftrojan-argo%3Fed%3D2560#${nodeName}
+    `;
+      console.log(Buffer.from(subTxt).toString('base64'));
+      fs.writeFileSync(subPath, Buffer.from(subTxt).toString('base64'));
+      console.log(`${FILE_PATH}/sub.txt saved successfully`);
+      uploadNodes();
+      app.get(`/${SUB_PATH}`, (req, res) => {
+        const encodedContent = Buffer.from(subTxt).toString('base64');
+        res.set('Content-Type', 'text/plain; charset=utf-8');
+        res.send(encodedContent);
+      });
+      resolve(subTxt);
       }, 2000);
     });
   }
 }
 
+// 自动上传节点或订阅
 async function uploadNodes() {
   if (UPLOAD_URL && PROJECT_URL) {
-    try { await axios.post(`${UPLOAD_URL}/api/add-subscriptions`, { subscription: [`${PROJECT_URL}/${SUB_PATH}`] }, { headers: { 'Content-Type': 'application/json' } }); } catch (e) {}
+    const subscriptionUrl = `${PROJECT_URL}/${SUB_PATH}`;
+    const jsonData = {
+      subscription: [subscriptionUrl]
+    };
+    try {
+        const response = await axios.post(`${UPLOAD_URL}/api/add-subscriptions`, jsonData, {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response && response.status === 200) {
+            console.log('Subscription uploaded successfully');
+            return response;
+        } else {
+          return null;
+        }
+    } catch (error) {
+        if (error.response) {
+            if (error.response.status === 400) {
+            }
+        }
+    }
   } else if (UPLOAD_URL) {
-    if (!fs.existsSync(listPath)) return;
-    const c = fs.readFileSync(listPath, 'utf-8');
-    const n = c.split('\n').filter(l => /(vless|vmess|trojan|hysteria2|tuic|anytls|socks):\/\//.test(l));
-    if (n.length > 0) try { await axios.post(`${UPLOAD_URL}/api/add-nodes`, JSON.stringify({ nodes: n }), { headers: { 'Content-Type': 'application/json' } }); } catch (e) {}
+      if (!fs.existsSync(listPath)) return;
+      const content = fs.readFileSync(listPath, 'utf-8');
+      const nodes = content.split('\n').filter(line => /(vless|vmess|trojan|hysteria2|tuic):\/\//.test(line));
+
+      if (nodes.length === 0) return;
+
+      const jsonData = JSON.stringify({ nodes });
+
+      try {
+          const response = await axios.post(`${UPLOAD_URL}/api/add-nodes`, jsonData, {
+              headers: { 'Content-Type': 'application/json' }
+          });
+          if (response && response.status === 200) {
+            console.log('Nodes uploaded successfully');
+            return response;
+        } else {
+            return null;
+        }
+      } catch (error) {
+          return null;
+      }
+  } else {
+      return;
   }
 }
 
+// 90s后删除相关文件
 function cleanFiles() {
   setTimeout(() => {
-    const f = [bootLogPath, configPath, webPath, botPath];  
-    if (HY2_PORT) f.push(hy2Path, hy2ConfigPath, certPath, keyPath);
-    if (TUIC_PORT) f.push(tuicPath, tuicConfigPath);
-    if (ANYTLS_PORT) f.push(anytlsPath);
-    if (NEZHA_PORT) f.push(npmPath); else if (NEZHA_SERVER && NEZHA_KEY) f.push(phpPath);
-    const c = process.platform === 'win32' ? `del /f /q ${f.join(' ')} > nul 2>&1` : `rm -rf ${f.join(' ')} >/dev/null 2>&1`;
-    exec(c, ()=>{ console.log('App is running'); });
-  }, 90000);
+    const filesToDelete = [bootLogPath, configPath, webPath, botPath];  
+    
+    if (NEZHA_PORT) {
+      filesToDelete.push(npmPath);
+    } else if (NEZHA_SERVER && NEZHA_KEY) {
+      filesToDelete.push(phpPath);
+    }
+
+    if (process.platform === 'win32') {
+      exec(`del /f /q ${filesToDelete.join(' ')} > nul 2>&1`, (error) => {
+        console.clear();
+        console.log('App is running');
+        console.log('Thank you for using this script, enjoy!');
+      });
+    } else {
+      exec(`rm -rf ${filesToDelete.join(' ')} >/dev/null 2>&1`, (error) => {
+        console.clear();
+        console.log('App is running');
+        console.log('Thank you for using this script, enjoy!');
+      });
+    }
+  }, 90000); // 90s
 }
 cleanFiles();
 
+// 自动访问项目URL
 async function AddVisitTask() {
-  if (!AUTO_ACCESS || !PROJECT_URL) return;
-  try { await axios.post('https://oooo.serv00.net/add-url', { url: PROJECT_URL }, { headers: { 'Content-Type': 'application/json' } }); } catch (e) {}
+  if (!AUTO_ACCESS || !PROJECT_URL) {
+    console.log("Skipping adding automatic access task");
+    return;
+  }
+
+  try {
+    const response = await axios.post('https://oooo.serv00.net/add-url', {
+      url: PROJECT_URL
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    console.log(`automatic access task added successfully`);
+    return response;
+  } catch (error) {
+    console.error(`Add automatic access task faild: ${error.message}`);
+    return null;
+  }
 }
 
+// 主运行逻辑
 async function startserver() {
-  try { deleteNodes(); cleanupOldFiles(); await generateConfig(); await downloadFilesAndRun(); await extractDomains(); await AddVisitTask(); } catch (e) { console.error(e); }
+  try {
+    argoType();
+    deleteNodes();
+    cleanupOldFiles();
+    await generateConfig();
+    await downloadFilesAndRun();
+    await extractDomains();
+    await AddVisitTask();
+  } catch (error) {
+    console.error('Error in startserver:', error);
+  }
 }
-startserver().catch(e => console.error(e));
+startserver().catch(error => {
+  console.error('Unhandled error in startserver:', error);
+});
 
-app.listen(PORT, () => console.log(`http server is running on port:${PORT}!`));
+
+// ==========================================
+// 前端书签系统：中间件、API 与路由
+// ==========================================
+
+// 使用 FILE_PATH (默认 'data') 确保一致性
+const BOOKMARKS_FILE = path.join(__dirname, FILE_PATH, 'bookmarks.json');
+
+app.use(express.json({ limit: '10mb' }));
+
+// 静态资源托管，映射至 public 目录
+app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
+app.use('/js', express.static(path.join(__dirname, 'public', 'js')));
+
+const readBookmarks = () => {
+  try {
+    if (fs.existsSync(BOOKMARKS_FILE)) {
+      return JSON.parse(fs.readFileSync(BOOKMARKS_FILE, 'utf8'));
+    }
+  } catch (error) {
+    console.error('读取书签文件失败:', error);
+  }
+  return {};
+};
+
+const writeBookmarks = (data) => {
+  try {
+    // 写入前安全检查：确保存放目录存在
+    const dir = path.dirname(BOOKMARKS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(BOOKMARKS_FILE, JSON.stringify(data, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('写入书签文件失败:', error);
+    return false;
+  }
+};
+
+app.post('/check-password', (req, res) => {
+  const { password } = req.body;
+  if (password === ADMIN_PASSWORD) {
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, message: '密码错误' });
+  }
+});
+
+app.get('/api/bookmarks', (req, res) => {
+  const data = readBookmarks();
+  res.json(data);
+});
+
+app.post('/api/bookmarks', (req, res) => {
+  const { password, bookmarksData } = req.body;
+  if (password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ success: false, message: '无权操作或登录已过期' });
+  }
+  if (writeBookmarks(bookmarksData)) {
+    res.json({ success: true, message: '保存成功' });
+  } else {
+    res.status(500).json({ success: false, message: '服务端写入文件失败' });
+  }
+});
+
+// HTML 页面路由，指向 public 目录
+app.get("/login", async (req, res) => {
+  try {
+    const data = await fs.promises.readFile(path.join(__dirname, 'public', 'login.html'), 'utf8');
+    res.send(data);
+  } catch (err) {
+    res.status(500).send("找不到 public/login.html 文件");
+  }
+});
+
+app.get("/admin", async (req, res) => {
+  try {
+    const data = await fs.promises.readFile(path.join(__dirname, 'public', 'admin.html'), 'utf8');
+    res.send(data);
+  } catch (err) {
+    res.status(500).send("找不到 public/admin.html 文件");
+  }
+});
+
+app.get("/", async (req, res) => {
+  try {
+    const data = await fs.promises.readFile(path.join(__dirname, 'public', 'index.html'), 'utf8');
+    res.send(data);
+  } catch (err) {
+    res.send(`Hello world!<br><br>You can access /${SUB_PATH} to get your nodes!`);
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`http server is running on port:${PORT}!`);
+  console.log(`Node Nav 书签面板访问地址: http://localhost:${PORT}`);
+});
