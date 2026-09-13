@@ -45,11 +45,10 @@
 | `NEZHA_SERVER` | 空 | 否 | 哪吒v1填写形式: nz.abc.com:8008;哪吒v0填写形式：nz.abc.com |
 | `NEZHA_PORT` | 空 | 否 | 使用哪吒v1请留空，哪吒v0需填写 |
 | `NEZHA_KEY` | 空 | 否 | 哪吒v1的NZ_CLIENT_SECRET;哪吒v0的agent密钥 |
-| `CFSM_ID` | `空` | 否 | cfsm-agent id |
-| `CFSM_SECRET` | `空` | 否 | cfsm-agent secret |
-| `CFSM_URL` | `空` | 否 | cfsm-agent url |
+| `CFSM_ID` | `空` | 否 | CFSM Agent 监控程序 ID |
+| `CFSM_SECRET` | `空` | 否 | CFSM Agent 监控程序 SECRET |
+| `CFSM_URL` | `空` | 否 | CFSM Agent 监控程序 URL |
 | `ADMIN_PASSWORD` | `admin` | 否 | 后台登录密码 |
-
 
 - 安装：npm install
 - 容器平台 Docker 镜像：ghcr.io/llodys/node-nav:latest
