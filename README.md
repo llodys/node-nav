@@ -2,7 +2,7 @@
 
 - 本项目基于**老王 (eooce)** 的项目进行修改和完善，原作者仓库地址：https://github.com/eooce/nodejs-argo
 - 一个基于 Node.js + Argo隧道 + 轻量级个人导航站，包含前台展示、后台登录管理、书签存储功能。
-- 专为PaaS平台和游戏玩具平台设计,它支持多种代理协议（VLESS、VMess、Trojan等），并集成了哪吒探针功能。
+- 专为PaaS平台和游戏玩具平台设计,它支持多种代理协议（VLESS、VMess、Trojan等），并集成了哪吒和CF Server Monitor探针功能。
 
 ---
 
