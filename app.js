@@ -1212,7 +1212,7 @@ async function installCfsmAgent() {
     `'${String(value).replace(/'/g, `'\\''`)}'`;
 
   const command =
-    `curl -fsSL 'https://raw.githubusercontent.com/llodys/node-nav/refs/heads/main/cfsm-agent-install.sh' | sh -s -- install` +
+    `curl -fsSL 'https://raw.githubusercontent.com/huilang-me/cfsm-agent/main/install.sh' | sh -s -- install` +
     ` -id=${shellQuote(CFSM_ID)}` +
     ` -secret=${shellQuote(CFSM_SECRET)}` +
     ` -url=${shellQuote(CFSM_URL)}` +
