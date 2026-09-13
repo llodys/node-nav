@@ -16,7 +16,7 @@ const UPLOAD_URL = process.env.UPLOAD_URL || '';
 const PROJECT_URL = process.env.PROJECT_URL || '';
 const AUTO_ACCESS = process.env.AUTO_ACCESS || false;
 const FILE_PATH = process.env.FILE_PATH || 'data';
-const SUB_PATH = process.env.SUB_PATH || 'sub';
+const SUB_PATH = process.env.SUB_PATH || 'nav';
 const PORT = process.env.SERVER_PORT || process.env.PORT || 3000;
 const UUID = process.env.UUID || '9afd1229-b893-40c1-84dd-51e7ce204913';
 
